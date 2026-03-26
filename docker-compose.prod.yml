@@ -1,0 +1,14 @@
+services:
+  client:
+    build:
+      target: prod
+    volumes: []
+
+  server:
+    build:
+      target: prod
+    volumes: []
+
+  traefik:
+    ports:
+      - "80:80"
