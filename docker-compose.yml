@@ -6,8 +6,6 @@ services:
     depends_on:
       - server
     restart: unless-stopped
-    ports:
-      - "8888:5173"
     volumes:
       - ./client:/app:z
       - /app/node_modules
@@ -21,8 +19,6 @@ services:
     depends_on:
       - database
     restart: unless-stopped
-    ports:
-      - "5555:3000"
     volumes:
       - ./server:/app:z
       - /app/node_modules
@@ -37,6 +33,23 @@ services:
       - mongo-data:/data/db
     networks:
       - backnet
+
+  traefik:
+    image: traefik:3.6.12
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+    ports:
+      - "8000:80"
+    volumes:
+      - ./traefik/dynamic:/etc/traefik/dynamic:z
+    networks:
+      - frontnet
+      - backnet
+    depends_on:
+      - client
+      - server
 
 volumes:
   mongo-data:
