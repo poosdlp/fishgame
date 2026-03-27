@@ -1,0 +1,15 @@
+[Unit]
+Description=MongoDB
+
+[Container]
+ContainerName=database
+Image=docker.io/library/mongo:8.2.5
+AutoUpdate=registry
+Volume=mongo-data.volume:/data/db
+Network=backnet.network
+
+[Service]
+Restart=unless-stopped
+
+[Install]
+WantedBy=default.target

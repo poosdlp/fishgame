@@ -1,0 +1,17 @@
+[Unit]
+Description=Traefik Reverse Proxy
+After=client.service server.service
+
+[Container]
+ContainerName=traefik
+Image=ghcr.io/poosdlp/fishgame-proxy:latest
+AutoUpdate=registry
+PublishPort=80:80
+Network=frontnet.network
+Network=backnet.network
+
+[Service]
+Restart=unless-stopped
+
+[Install]
+WantedBy=default.target

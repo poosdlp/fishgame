@@ -1,0 +1,16 @@
+[Unit]
+Description=Server
+After=database.service
+
+[Container]
+ContainerName=server
+Image=ghcr.io/poosdlp/fishgame-server:latest
+AutoUpdate=registry
+Network=backnet.network
+Network=frontnet.network
+
+[Service]
+Restart=unless-stopped
+
+[Install]
+WantedBy=default.target

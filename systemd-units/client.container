@@ -1,0 +1,15 @@
+[Unit]
+Description=Client
+After=server.service
+
+[Container]
+ContainerName=client
+Image=ghcr.io/poosdlp/fishgame-client:latest
+AutoUpdate=registry
+Network=frontnet.network
+
+[Service]
+Restart=unless-stopped
+
+[Install]
+WantedBy=default.target
