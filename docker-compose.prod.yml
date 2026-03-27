@@ -1,0 +1,16 @@
+services:
+  client:
+    build:
+      context: ./client
+      target: prod
+
+  server:
+    build:
+      context: ./server
+      target: prod
+
+  traefik:
+    build:
+      context: ./traefik
+    ports:
+      - "80:80"
