@@ -1,0 +1,15 @@
+info:
+  name: Refresh JWT
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: http://{{baseurl}}/api/auth/refresh
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

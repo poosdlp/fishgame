@@ -1,0 +1,15 @@
+info:
+  name: Who am I
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: http://{{baseurl}}/api/profile/whoami
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
