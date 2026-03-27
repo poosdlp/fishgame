@@ -10,7 +10,7 @@ services:
     volumes: []
 
   traefik:
-    command:
-      - "--providers.file.watch=false"
+    build:
+      context: ./traefik
     ports:
       - "80:80"

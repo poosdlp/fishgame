@@ -36,6 +36,7 @@ services:
 
   traefik:
     image: traefik:3.6.12
+    restart: unless-stopped
     command:
       - "--entrypoints.web.address=:80"
       - "--providers.file.directory=/etc/traefik/dynamic"
