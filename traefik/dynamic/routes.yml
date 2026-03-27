@@ -24,7 +24,7 @@ http:
     client:
       loadBalancer:
         servers:
-          - url: "http://client:5173"
+          - url: "http://client:80"
     server:
       loadBalancer:
         servers:

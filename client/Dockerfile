@@ -11,8 +11,8 @@ RUN npm install
 FROM deps AS devel
 WORKDIR /app
 COPY . .
-EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host"]
+EXPOSE 80
+CMD ["npm", "run", "dev", "--", "--port", "80", "--host"]
 
 # Build
 FROM deps AS build
