@@ -182,3 +182,50 @@
     border-right-color: var(--border);
   }
 }
+
+/* SIDEBARS */
+.sidebar {
+  position: fixed;
+  top: 0;
+  width: 250px;
+  height: 100%;
+  background: #1e293b;
+  color: white;
+  padding: 20px;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+/* Left sidebar */
+.sidebar.left {
+  left: 0;
+  transform: translateX(-100%);
+}
+
+/* Right sidebar */
+.sidebar.right {
+  right: 0;
+  transform: translateX(100%);
+}
+
+/* When open */
+.sidebar.open {
+  transform: translateX(0);
+}
+
+/* Optional overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 900;
+}
+
+/* Main content */
+.main {
+  text-align: center;
+  padding: 20px;
+}
