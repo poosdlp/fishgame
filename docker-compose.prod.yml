@@ -14,6 +14,3 @@ services:
       context: ./traefik
     ports:
       - "80:80"
-    command:
-      - "--entrypoints.web.address=:80"
-      - "--configFile=/etc/traefik/traefik.yml"
