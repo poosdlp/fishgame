@@ -1,0 +1,27 @@
+services:
+  client:
+    build:
+      context: ./client
+      target: devel
+    volumes:
+      - ./client:/app:z
+      - /app/node_modules
+
+  server:
+    build:
+      context: ./server
+      target: devel
+    volumes:
+      - ./server:/app:z
+      - /app/node_modules
+
+  traefik:
+    image: traefik:3.6.12
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+    ports:
+      - "8000:80"
+    volumes:
+      - ./traefik/dynamic:/etc/traefik/dynamic:z

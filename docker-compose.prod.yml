@@ -1,13 +1,13 @@
 services:
   client:
     build:
+      context: ./client
       target: prod
-    volumes: []
 
   server:
     build:
+      context: ./server
       target: prod
-    volumes: []
 
   traefik:
     build:
@@ -16,4 +16,3 @@ services:
       - "80:80"
     command:
       - "--entrypoints.web.address=:80"
-    volumes: []

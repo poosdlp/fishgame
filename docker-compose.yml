@@ -1,27 +1,15 @@
 services:
   client:
-    build:
-      context: ./client
-      target: devel
     depends_on:
       - server
     restart: unless-stopped
-    volumes:
-      - ./client:/app:z
-      - /app/node_modules
     networks:
       - frontnet
 
   server:
-    build:
-      context: ./server
-      target: devel
     depends_on:
       - database
     restart: unless-stopped
-    volumes:
-      - ./server:/app:z
-      - /app/node_modules
     networks:
       - backnet
       - frontnet
@@ -35,16 +23,7 @@ services:
       - backnet
 
   traefik:
-    image: traefik:3.6.12
     restart: unless-stopped
-    command:
-      - "--entrypoints.web.address=:80"
-      - "--providers.file.directory=/etc/traefik/dynamic"
-      - "--providers.file.watch=true"
-    ports:
-      - "8000:80"
-    volumes:
-      - ./traefik/dynamic:/etc/traefik/dynamic:z
     networks:
       - frontnet
       - backnet
