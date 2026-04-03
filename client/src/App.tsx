@@ -55,6 +55,7 @@ function loadimages() {
 
 function App() {
   const [state, setState] = useState<GameState>("none");
+  const [bobber, setBobber] = useState<{x: number, y: number} | null>(null);
 
   const [showInventory, setShowInventory] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -72,11 +73,11 @@ function App() {
   { name: "Anglerfish", rarity: "rare" },
   { name: "Golden Koi", rarity: "legendary" },
   { name: "Dragonfish", rarity: "mythical" },
-  { name: "livia fish", rarity: "the one that got away", length: 170,weight: "how rude to ask"},
-  { name: "axel fish", rarity: "the one that got away", length: 150,weight: "how rude to ask"},
-  { name: "marcus fish", rarity: "the one that got away", length: 160,weight: "how rude to ask"},
-  { name: "jake fish", rarity: "the one that got away", length: 140,weight: "how rude to ask"},
-  { name: "josh fish", rarity: "the one that got away", length: 180,weight: "how rude to ask"},
+  { name: "livia fish", rarity: "the one that got away", length: 170, weight: "how rude to ask"},
+  { name: "axel fish", rarity: "the one that got away", length: 150, weight: "how rude to ask"},
+  { name: "marcus fish", rarity: "the one that got away", length: 160, weight: "how rude to ask"},
+  { name: "jake fish", rarity: "the one that got away", length: 140, weight: "how rude to ask"},
+  { name: "josh fish", rarity: "the one that got away", length: 180, weight: "how rude to ask"},
 
 ];
 
@@ -88,12 +89,30 @@ function App() {
       time += 0.016; 
       setFishInLake(prev =>
         prev.map(fish => {
-            
-          let newX = fish.x + fish.vx + Math.sin(time + fish.y * 0.01) * 0.8;
-          let newY = fish.y + fish.vy + Math.cos(time + fish.x * 0.01) * 0.6;
-
+          
           let newVx = fish.vx;
           let newVy = fish.vy;
+
+          if(bobber){
+            const dx = bobber.x - fish.x;
+            const dy = bobber.y - fish.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist >5) {
+              newVx += (dx / dist) * 0.03;
+              newVy += (dy / dist) * 0.03;
+            }
+            const speed = Math.sqrt(newVx * newVx + newVy * newVy);
+            const maxSpeed = 1;
+            if (speed > maxSpeed) {
+              newVx = (newVx / speed) * maxSpeed;
+              newVy = (newVy / speed) * maxSpeed;
+            }
+          }
+
+          let newX = fish.x + newVx + Math.sin(time + fish.y * 0.01) * 0.2;
+          let newY = fish.y + newVy + Math.cos(time + fish.x * 0.01) * 0.2;
+
+            
 
           return {
             ...fish,
@@ -153,8 +172,8 @@ function App() {
     const centerX = LakeWidth / 2;
     const centerY = LakeHeight / 2;
 
-    const vx = (centerX - x) * 0.005;
-    const vy = (centerY - y) * 0.005;
+    const vx = (centerX - x) * 0.001;
+    const vy = (centerY - y) * 0.001;
 
 
 
@@ -170,7 +189,7 @@ function App() {
     } else if (roll < 0.9) {
       const legendaryFish = fishTypes.filter(f => f.rarity === "legendary");
       fish = legendaryFish[Math.floor(Math.random() * legendaryFish.length)];
-    } else if (roll < 0.98) {
+    } else if (roll < 0.99) {
       const mythicalFish = fishTypes.filter(f => f.rarity === "mythical");
       fish = mythicalFish[Math.floor(Math.random() * mythicalFish.length)];
     } else {
@@ -320,6 +339,19 @@ function App() {
           <h1>Fishing Game thats very cool and girly but in a way that everyone loves</h1>
           <div className="game-screen">
             <div className="lake">
+              {bobber && (
+                <div style={{
+                  position: "absolute",
+                  left: bobber.x - 10,
+                  top: bobber.y - 10,
+                  width: 20,
+                  height: 20,
+                  background: "red",
+                  borderRadius: "50%",
+                  border: "3px solid white",
+                  zIndex: 10,
+                }} />
+              )}
               {fishInLake.map(fish => (
                 <div
                   key={fish.id}
@@ -349,6 +381,10 @@ function App() {
                   const newFish = createFish();
                   setFishInLake(prev => [...prev, newFish]);
                 }
+                setBobber({
+                  x: Math.random() * (LakeWidth - 100) + 50,
+                  y: Math.random() * (LakeHeight - 100) + 50,
+                });
             }}>Play</button>
             
           )}
