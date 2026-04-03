@@ -18,11 +18,37 @@ function App() {
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch(apiUrl('/api/auth/me'), {
+      const token = localStorage.getItem('accessToken')
+
+      if (token) {
+        const response = await fetch(apiUrl('/api/auth/me'), {
+          headers: { 'Authorization': `Bearer ${token}` },
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const userData = await response.json()
+          setUser(userData)
+          setIsAuthenticated(true)
+          return
+        }
+      }
+
+      // Token missing or expired — try refresh cookie
+      const refreshResponse = await fetch(apiUrl('/api/auth/refresh'), {
+        method: 'POST',
         credentials: 'include'
       })
-      if (response.ok) {
-        const userData = await response.json()
+      if (!refreshResponse.ok) return
+
+      const { accessToken } = await refreshResponse.json()
+      localStorage.setItem('accessToken', accessToken)
+
+      const meResponse = await fetch(apiUrl('/api/auth/me'), {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+        credentials: 'include'
+      })
+      if (meResponse.ok) {
+        const userData = await meResponse.json()
         setUser(userData)
         setIsAuthenticated(true)
       }
