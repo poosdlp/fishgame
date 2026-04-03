@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { use, useState } from "react";
+import { useEffect } from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
 import {Inventory } from './components/inventory';
 
 import './App.css'
+
+const LakeWidth = 800;
+const LakeHeight = 500;
+
+
+let tempbob;
+let tempfish;
 
 type GameState = "bite" | "caught" | "waiting"| "none";
 
@@ -28,8 +36,21 @@ type Fishy = {
   rarity: FishTemplate["rarity"];
   weight: number | "how rude to ask";
   length: number;
+
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+
 };
 
+function loadimages() {
+  tempbob = new Image();
+  tempbob.src = "/tempbob.avif";
+
+  tempfish = new Image();
+  tempfish.src = "/tempfish.png";
+}
 
 
 function App() {
@@ -40,6 +61,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("leaderboard");
   const isAnySidebarOpen = showInventory || showLeaderboard;
   const [inventory, setInventory] = useState<Fishy[]>([]);
+  const [fishInLake, setFishInLake] = useState<Fishy[]>([]);
 
 //temp fish data for testing inventory
   const fishTypes: FishTemplate[] = [
@@ -58,11 +80,83 @@ function App() {
 
 ];
 
+ useEffect(() => {
+    let animationId: number;
+    let time = 0;
+
+    const update = () => {
+      time += 0.016; 
+      setFishInLake(prev =>
+        prev.map(fish => {
+            
+          let newX = fish.x + fish.vx + Math.sin(time + fish.y * 0.01) * 0.8;
+          let newY = fish.y + fish.vy + Math.cos(time + fish.x * 0.01) * 0.6;
+
+          let newVx = fish.vx;
+          let newVy = fish.vy;
+
+          return {
+            ...fish,
+            x: newX,
+            y: newY,
+            vx: newVx,
+            vy: newVy,
+          };
+        })
+        .filter(fish =>
+        fish.x > -100 &&
+        fish.x < LakeWidth + 100 &&
+        fish.y > -100 &&
+        fish.y < LakeHeight + 100
+      )
+      );
+
+      animationId = requestAnimationFrame(update);
+    };
+
+    animationId = requestAnimationFrame(update);
+
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+        
+
+
   
   const createFish = (): Fishy => {
     const roll = Math.random();
+    const side=Math.floor(Math.random() * 4);
 
     let fish;
+
+// spawn outside the lake so it has to swim in
+    let x=0;
+    let y=0;
+    
+    if (side === 0) {
+      // left
+      x = -20;
+      y = Math.random() * LakeHeight;
+    } else if (side === 1) {
+      // right
+      x = LakeWidth + 20;
+      y = Math.random() * LakeHeight;
+    } else if (side === 2) {
+      // top
+      x = Math.random() * LakeWidth;
+      y = -20;
+    } else {
+      // bottom
+      x = Math.random() * LakeWidth;
+      y = LakeHeight + 20;
+    }
+
+    const centerX = LakeWidth / 2;
+    const centerY = LakeHeight / 2;
+
+    const vx = (centerX - x) * 0.005;
+    const vy = (centerY - y) * 0.005;
+
+
 
     if (roll < 0.6) {
       const commonFish = fishTypes.filter(f => f.rarity === "common");
@@ -91,7 +185,15 @@ function App() {
         name: fish.name,
         rarity: fish.rarity,
         length: fish.length,   
-        weight: fish.weight 
+        weight: fish.weight ,
+
+      // spawn outside the lake so it has to swim in
+        x,y,
+
+        // initial movement
+        vx,
+        vy,
+
       };
     }
 
@@ -111,6 +213,11 @@ function App() {
     rarity: fish.rarity as Fishy["rarity"],
     length: length,
     weight: weight,
+
+    x,
+    y,
+    vx,
+    vy,
   };
 };
 
@@ -211,12 +318,39 @@ function App() {
         {/* MAIN CONTENT */}
         <div style={{textAlign: "center", marginTop: "50px"}}>
           <h1>Fishing Game thats very cool and girly but in a way that everyone loves</h1>
+          <div className="game-screen">
+            <div className="lake">
+              {fishInLake.map(fish => (
+                <div
+                  key={fish.id}
+                  style={{
+                    position: "absolute",
+                    left: fish.x,
+                    top: fish.y,
+                    width: 20,
+                    height: 20,
+                    background: "orange",
+                    borderRadius: "50%",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
 
-          
 
           {/* Start screen */}
+
           {state === "none" && (
-            <button onClick={() => setState("waiting")}>Play</button>
+            
+            <button onClick={() => {
+              setState("waiting");
+              const count = Math.floor(Math.random() * 5) + 2; // random 2-6
+                for (let i = 0; i < count; i++) {
+                  const newFish = createFish();
+                  setFishInLake(prev => [...prev, newFish]);
+                }
+            }}>Play</button>
+            
           )}
           {/* Waiting */}
           {state === "waiting" && (
