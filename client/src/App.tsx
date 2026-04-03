@@ -1,14 +1,67 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
+import Auth from './Auth'
+import { apiUrl } from './api'
 import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    // Check if user is already authenticated
+    checkAuthStatus()
+  }, [])
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/auth/me'), {
+        credentials: 'include'
+      })
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+        setIsAuthenticated(true)
+      }
+    } catch (error) {
+      // Not authenticated
+    }
+  }
+
+  const handleLogin = (token: string) => {
+    localStorage.setItem('accessToken', token)
+    setIsAuthenticated(true)
+    checkAuthStatus() // Get user info
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch(apiUrl('/api/auth/logout'), {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      // Ignore logout errors
+    }
+    localStorage.removeItem('accessToken')
+    setIsAuthenticated(false)
+    setUser(null)
+  }
+
+  if (!isAuthenticated) {
+    return <Auth onLogin={handleLogin} />
+  }
 
   return (
     <>
+      <div className="header">
+        <span>Welcome, {user?.username || user?.email}!</span>
+        <button onClick={handleLogout}>Logout</button>
+      </div>
+
       <section id="center">
         <div className="hero">
           <img src={heroImg} className="base" width="170" height="179" alt="" />
@@ -16,9 +69,9 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>Get farted</h1>
+          <h1>Fish Game</h1>
           <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+            Welcome to the fish game! You're authenticated.
           </p>
         </div>
         <button
