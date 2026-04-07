@@ -4,6 +4,7 @@ import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
 import {Inventory } from './components/inventory';
+import { QRCodeSVG } from 'qrcode.react';
 
 import './App.css'
 
@@ -60,6 +61,7 @@ function loadimages() {
 
 function App() {
   const [state, setState] = useState<GameState>("none");
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [bobber, setBobber] = useState<{x: number, y: number} | null>(null);
 
   const [showInventory, setShowInventory] = useState(false);
@@ -492,8 +494,10 @@ function App() {
           {/* Start screen */}
 
           {state === "none" && (
-            
+
             <button onClick={() => {
+              const newSessionId = crypto.randomUUID();
+              setSessionId(newSessionId);
               setState("waiting");
               const count = Math.floor(Math.random() * 5) + 2; // random 2-6
               const newFishArray: Fishy[] = []; // create an array to hold new fish
@@ -516,7 +520,17 @@ function App() {
           )}
           {/* Waiting */}
           {state === "waiting" && (
-            <WaitingForABite onFishBite={() => setState("bite")} />
+            <>
+              <WaitingForABite onFishBite={() => setState("bite")} />
+              {sessionId && (
+                <div className="qr-backdrop">
+                  <div className="qr-popup">
+                    <p className="qr-label">Scan to join on mobile</p>
+                    <QRCodeSVG value={`${window.location.origin}/session/${sessionId}`} size={200} />
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Bite */}
