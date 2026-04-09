@@ -70,6 +70,7 @@ function App() {
   const [fishInLake, setFishInLake] = useState<Fishy[]>([]);
   const [targetFishId, setTargetFishId] = useState<string | null>(null);
   const hoverQueueRef = useRef<string[]>([]);
+
 //temp fish data for testing inventory
   const fishTypes: FishTemplate[] = [
   { name: "Salmon", rarity: "common" },
@@ -262,9 +263,9 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
           if(!targetFishId){
             if(!hoverQueueRef.current.includes(fish.id) && hoverQueueRef.current.length <2){
               hoverQueueRef.current.push(fish.id)
+              console.log("added fish to Q-----------------------------------");
             }
-            console.log("added fish to Q-----------------------------------");
-            
+ 
         }
 
           const closeBoost = dist < 70 ? 2 : 1;
