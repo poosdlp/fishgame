@@ -16,6 +16,7 @@ type GameState = "bite" | "caught" | "waiting"| "none";
 
 
 type LeaderboardTab = "leaderboard" | "recent";
+type inventorytab = "fish" | "journals";
 
 type FishTemplate =
   | {
@@ -42,10 +43,9 @@ type Fishy = {
   vx: number;
   vy: number;
   behavior: FishBehavior;
-
   tapCount: number;
   tapCooldown: number;
-  isDiving: boolean;
+  requiredTaps: number;
 
 };
 
@@ -92,103 +92,57 @@ function App() {
     let time = 0;
 
     const update = () => {
-      time += 0.016; 
+      time += 1; 
       setFishInLake(prev =>
         prev.map(fish => {
           
-          const attractionRadius = 300;
-          const stopRadius = 10;
+          const attractionRadius = 150;
+          const hoverRadius = 50;
+          const maxspeed = 1;
+
+          let {
+          x, y, vx, vy,
+          behavior,
+          tapCount,
+          tapCooldown,
+          } = fish;
+
+          let newVx = vx;
+          let newVy = vy;
+          let newBehavior = behavior;
          
 
           let dx = 0;
           let dy = 0;
-          let dist = Infinity;
-          let newVx = fish.vx;
-          let newVy = fish.vy;
-          let behavior = fish.behavior;
-          let tapCount = fish.tapCount;
-          let tapCooldown = fish.tapCooldown;
-          let isDiving = fish.isDiving;    
+          let dist = 0;
+            
 
           if (bobber) {
             dx = bobber.x - fish.x;
             dy = bobber.y - fish.y;
             dist = Math.sqrt(dx * dx + dy * dy);
           }
+          if (!isFinite(dist) || dist < 1) dist = 1;
 
-            if (dist < attractionRadius && fish.behavior === "swimming") {
-              fish.behavior = "attracted";
-            }
-          
-
-          if (fish.behavior === "attracted") {
-            newVx += (dx / dist) * 0.3;
-            newVy += (dy / dist) * 0.3;
-            if (dist<50){
-              behavior = "hovering";
-            }
+          //caught
+          if (newBehavior === "caught") {
+            return fish; // frozen
           }
-          
-          let hook=0; //temp hook variable to simulate hook state, eventually replace with mobile logic
 
-          if(fish.behavior === "hovering" && hook === 0 && bobber ) { 
-            //count down taps
-            if (tapCooldown > 0) {
-              tapCooldown -= 1;
-            }
+          let win=false; //temp variable for winning the mini game, eventually replace with mobile logic
 
-            if(!isDiving && tapCooldown <= 0) {
-              isDiving = true;
-              tapCooldown = 30+Math.random() * 30; // 0.5 second cooldown
-            }
 
-            let offsetX =0;
-            let offsetY =0;
-
-            if(isDiving) {
-              offsetX = dx * 0.2;
-              offsetY = dy * 0.2;
-
-              if(dist<5){
-                isDiving=false;
-                tapCount += 1;
-              }
-            } else {
-              const angle = time +Number(fish.id.slice(0, 5)) * 0.0001; // unique angle based on id
-              offsetX = Math.cos(angle) * 12;
-              offsetY = Math.sin(angle) * 12;
-            }
-
-          if (tapCount >= 3 + Math.floor(Math.random() * 4)) {
-            fish.behavior = "bite";
-          }
-         return {
-            ...fish,
-            behavior,
-            tapCount,
-            tapCooldown,
-            isDiving,
-            x: bobber.x + offsetX,
-            y: bobber.y + offsetY,
-            vx: 0,
-            vy: 0,
-          };
-        }       
-
-        //temp variable for winning the mini game, 
-        // eventually replace with mobile logic 
-        let win=false;
-
-        if(fish.behavior === "bite" && bobber) {
-          hook=1; //eventually replace with mobile logic
+          if(newBehavior === "bite" && bobber) {
+          let hook=1; //eventually replace with mobile logic
 
           if(hook===1){
             //pop up with bite screen and start mini game on phone
             //if win change flag to caught 
             win=true; //temp auto win for testing
+            newBehavior="caught";
             return {
               ...fish,
-              behavior: "caught" as FishBehavior,
+              behavior: newBehavior,
               x: bobber.x,
               y: bobber.y,
               vx: 0,
@@ -200,18 +154,19 @@ function App() {
             }
         }
 
-        if(win===true){
-          fish.behavior="caught";
+        let hook=0; //temp hook variable to simulate hook state, eventually replace with mobile logic 
+
+
+        if(newBehavior === "hovering" && hook === 0 && bobber ) {
+          
+        }
+    
+
+        if (newBehavior === "attracted") {
+
         }
 
-
-          if (fish.behavior === "caught") { 
-            //return stats screen eventually
-            //check if caught before eventually
-            
-            return fish;
-          }
-
+        if(newBehavior === "swimming") {
           // 🐟 normal movement + wobble
             const speed = Math.sqrt(newVx * newVx + newVy * newVy);
             const maxSpeed = 1.5;
@@ -231,7 +186,12 @@ function App() {
               y: fish.y + newVy + wobbleY,
               vx: newVx,
               vy: newVy,
-            };
+            };}
+
+
+            return fish;
+
+
           })
         .filter(fish =>
         fish.x > -100 &&
@@ -326,8 +286,8 @@ function App() {
         behavior: "swimming",
         tapCount: 0,
         tapCooldown: 0,
-        isDiving: false,
-
+        requiredTaps: Math.floor(Math.random() * 5) + 3, // random number of taps required to catch the fish  
+        
       };
     }
 
@@ -355,7 +315,7 @@ function App() {
     behavior: "swimming",
     tapCount: 0,
     tapCooldown: 0,
-    isDiving: false,
+    requiredTaps: Math.floor(Math.random() * 5) + 3, // random number of taps required to catch the fish
   };
 };
 
