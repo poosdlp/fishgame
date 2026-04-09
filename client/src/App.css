@@ -253,47 +253,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.divider {
-  text-align: center;
-  margin: 1.5rem 0;
-  position: relative;
-  color: var(--text-secondary);
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--border);
-}
-
-.divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--surface);
-  padding: 0 1rem;
-}
-
-.passkey-section {
-  margin-bottom: 1rem;
-}
-
-.passkey-button {
-  background: var(--surface) !important;
-  border: 2px solid var(--accent) !important;
-  color: var(--accent) !important;
-}
-
-.passkey-button:hover:not(:disabled) {
-  background: var(--accent-bg) !important;
-}
-
 .message {
   margin-top: 1rem;
   padding: 0.75rem;

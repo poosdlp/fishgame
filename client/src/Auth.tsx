@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import { apiUrl } from './api';
 
 interface AuthProps {
@@ -51,102 +50,6 @@ export default function Auth({ onLogin }: AuthProps) {
     }
   };
 
-  const handlePasskeyRegister = async () => {
-    if (!email) {
-      setMessage('Please enter your email first');
-      return;
-    }
-
-    setLoading(true);
-    setMessage('');
-
-    try {
-      // Get registration options
-      const optionsResponse = await fetch(apiUrl('/api/auth/passkey/register/options'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      if (!optionsResponse.ok) {
-        const error = await optionsResponse.json();
-        setMessage(error.message || 'Failed to get registration options');
-        return;
-      }
-
-      const options = await optionsResponse.json();
-
-      // Start WebAuthn registration
-      const registrationResponse = await startRegistration(options);
-
-      // Verify registration
-      const verifyResponse = await fetch(apiUrl('/api/auth/passkey/register/verify'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, response: registrationResponse })
-      });
-
-      const verifyData = await verifyResponse.json();
-
-      if (verifyResponse.ok) {
-        setMessage('Passkey registered successfully! You can now log in with it.');
-      } else {
-        setMessage(verifyData.message || 'Passkey registration failed');
-      }
-    } catch (error) {
-      console.error('Passkey registration error:', error);
-      setMessage('Passkey registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePasskeyLogin = async () => {
-    setLoading(true);
-    setMessage('');
-
-    try {
-      // Get authentication options
-      const optionsResponse = await fetch(apiUrl('/api/auth/passkey/authenticate/options'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(email ? { email } : {})
-      });
-
-      if (!optionsResponse.ok) {
-        const error = await optionsResponse.json();
-        setMessage(error.message || 'Failed to get authentication options');
-        return;
-      }
-
-      const options = await optionsResponse.json();
-
-      // Start WebAuthn authentication
-      const authResponse = await startAuthentication(options);
-
-      // Verify authentication
-      const verifyResponse = await fetch(apiUrl('/api/auth/passkey/authenticate/verify'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(email ? { email, response: authResponse } : { response: authResponse })
-      });
-
-      const verifyData = await verifyResponse.json();
-
-      if (verifyResponse.ok) {
-        onLogin(verifyData.accessToken);
-      } else {
-        setMessage(verifyData.message || 'Passkey authentication failed');
-      }
-    } catch (error) {
-      console.error('Passkey authentication error:', error);
-      setMessage('Passkey authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="auth-container">
       <div className="auth-card">
@@ -189,18 +92,6 @@ export default function Auth({ onLogin }: AuthProps) {
             {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
           </button>
         </form>
-
-        <div className="divider">or</div>
-
-        <div className="passkey-section">
-          <button
-            onClick={isLogin ? handlePasskeyLogin : handlePasskeyRegister}
-            disabled={loading || (!isLogin && !email)}
-            className="passkey-button"
-          >
-            {loading ? 'Loading...' : (isLogin ? 'Login with Passkey' : 'Register Passkey')}
-          </button>
-        </div>
 
         {message && <div className="message">{message}</div>}
 
