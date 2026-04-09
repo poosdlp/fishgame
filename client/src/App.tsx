@@ -1,4 +1,4 @@
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import { useEffect } from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
@@ -87,18 +87,31 @@ function App() {
 
 ];
 
+const bobberRef = useRef<{ x: number; y: number } | null>(null);
+
+
  useEffect(() => {
+   bobberRef.current = bobber;
     let animationId: number;
     let time = 0;
 
     const update = () => {
       time += 1; 
+    
       setFishInLake(prev =>
         prev.map(fish => {
+          //console.log("fish count:", prev.length);
+          const bobber = bobberRef.current;
+          // console.log("bobber in update:", bobber);
+          // console.log("bobber location", bobber ? `(${bobber.x.toFixed(2)}, ${bobber.y.toFixed(2)})` : "null");
+          // console.log("fish location", `(${fish.x.toFixed(2)}, ${fish.y.toFixed(2)})`);
+          // console.log("fish dist:", bobber ? Math.sqrt((bobber.x - fish.x) ** 2 + (bobber.y - fish.y) ** 2).toFixed(2) : "N/A");
           
-          const attractionRadius = 150;
+          const attractionRadius = 200;
           const hoverRadius = 50;
-          const maxspeed = 1;
+          const biteRadius = 15;
+          const maxspeed = 1.3;
+          const minSpeed = 0.2;
 
           let {
           x, y, vx, vy,
@@ -158,15 +171,125 @@ function App() {
 
 
         if(newBehavior === "hovering" && hook === 0 && bobber ) {
+          //console.log("hovering logic running");
+        //   const seed = Number(fish.id.slice(0, 5));
+        //   const angle = time * 0.01 + seed;
+      
+
+        //   const orbitX = Math.cos(angle) * hoverRadius;
+        //   const orbitY = Math.sin(angle) * hoverRadius;
           
-        }
+
+        //   const pullStrength = 0.5;
+
+        //   const pullX = dx * pullStrength;
+        //   const pullY = dy * pullStrength;
+
+        //   let newtapCount = tapCount;
+        //   let newTapCooldown = tapCooldown;
+
+        //   if(dist < biteRadius) {
+        //     newtapCount = tapCount + 1;
+        //     newTapCooldown = 30; // 30 frames cooldown
+
+        //   }
+
+        //   //temp
+        //   newBehavior = "bite";
+
+        //   return {
+        //     ...fish,
+        //     behavior: newBehavior,
+        //     x: bobber.x + orbitX + pullX,
+        //     y: bobber.y + orbitY + pullY,
+        //     vx: 0,
+        //     vy: 0,
+        //     tapCount: newtapCount,
+        //     tapCooldown: newTapCooldown,
+        //   };
+
+
+
+          
+         }
     
 
         if (newBehavior === "attracted") {
+                   // console.log("attracted logic running");
+
+
+          if(bobber && dist < hoverRadius) {
+            newBehavior = "hovering";
+          }
+          const closeBoost = dist < 70 ? 2 : 1;
+
+                    
+          const speed = Math.max(
+            minSpeed,
+            Math.min(dist / attractionRadius, 1) * maxspeed
+          );
+          
+
+          const targetVx = (dx / dist) * speed;
+          const targetVy = (dy / dist) * speed;
+
+          const turnSpeed = 0.15; // responsiveness
+          const accel = 0.03;     // natural pull
+
+          // steering (fast response)
+          newVx += (targetVx - newVx) * turnSpeed;
+          newVy += (targetVy - newVy) * turnSpeed;
+
+          // acceleration (organic feel)
+          newVx += (dx / dist) * accel* closeBoost;
+          newVy += (dy / dist) * accel* closeBoost;
+
+          // wobble (personality)
+          const seed = Number(fish.id.slice(0, 8)) || 0; // prevent NaN
+          const wobbleStrength = 0.5;
+          const wobbleSpeed = 0.1;
+
+          // optional: reduce wobble when close to bobber
+          const wobbleFactor = Math.max(dist / attractionRadius, 0.1);
+
+          const wobbleX = Math.sin(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
+          const wobbleY = Math.cos(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
+
+          return {
+            ...fish,
+            behavior: newBehavior,
+            x: x + newVx + wobbleX,
+            y: y + newVy + wobbleY,
+            vx: newVx,
+            vy: newVy,
+          };
 
         }
 
         if(newBehavior === "swimming") {
+
+          //console.log("swimming logic running");
+          //console.log("fish dist:", dist);
+
+
+          if (bobber && dist < attractionRadius) {
+            //console.log("entering attraction radius, behavior changing to attracted");
+            const speed = Math.min(dist / attractionRadius, 1) * maxspeed;
+            const targetVx = (dx / dist) * speed;
+            const targetVy = (dy / dist) * speed;
+
+            const turnSpeed = 0.2;   // responsiveness
+            const accelBoost = 0.05; // extra pull
+
+            newVx += (targetVx - newVx) * turnSpeed;
+            newVy += (targetVy - newVy) * turnSpeed;
+
+            // extra pull so it doesn’t feel too sluggish when far away
+            newVx += (dx / dist) * accelBoost;
+            newVy += (dy / dist) * accelBoost;
+            //console.log("changing to attracted now");
+            newBehavior = "attracted";
+          }
           // 🐟 normal movement + wobble
             const speed = Math.sqrt(newVx * newVx + newVy * newVy);
             const maxSpeed = 1.5;
@@ -176,17 +299,32 @@ function App() {
               newVy = (newVy / speed) * maxSpeed;
             }
 
-            const wobbleX = Math.sin(time + fish.y * 0.01) * 0.2;
-            const wobbleY = Math.cos(time + fish.x * 0.01) * 0.2;
+            const wobbleX = Math.sin(time + fish.y * 0.05) * 0.2;
+            const wobbleY = Math.cos(time + fish.x * 0.06) * 0.2;
+
+            if (Math.random() < 0.02) { // 2% chance per frame
+              const angle = Math.random() * (Math.PI / 4);
+              const direction = Math.random() < 0.5 ? -1 : 1;
+              const theta = angle * direction;
+
+              const rotatedVx = newVx * Math.cos(theta) - newVy * Math.sin(theta);
+              const rotatedVy = newVx * Math.sin(theta) + newVy * Math.cos(theta);
+
+              newVx = rotatedVx;
+              newVy = rotatedVy;
+            }
 
             return {
               ...fish,
-              behavior,
+              behavior: newBehavior,
               x: fish.x + newVx + wobbleX,
               y: fish.y + newVy + wobbleY,
               vx: newVx,
               vy: newVy,
-            };}
+            };
+
+          }
+
 
 
             return fish;
@@ -207,7 +345,7 @@ function App() {
     animationId = requestAnimationFrame(update);
 
     return () => cancelAnimationFrame(animationId);
-  }, []);
+  }, [bobber]);
         
 
 
@@ -455,7 +593,7 @@ function App() {
             
             <button onClick={() => {
               setState("waiting");
-              const count = Math.floor(Math.random() * 5) + 2; // random 2-6
+              const count = Math.floor(Math.random() * 5) + 6; // random 2-6
               const newFishArray: Fishy[] = []; // create an array to hold new fish
                 for (let i = 0; i < count; i++) {
                   const newFishList = createFish();
