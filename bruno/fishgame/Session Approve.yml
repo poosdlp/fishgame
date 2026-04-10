@@ -1,0 +1,20 @@
+info:
+  name: Session Approve
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: http://{{baseurl}}/api/session/{{sessionToken}}/approve
+  auth: inherit
+
+runtime:
+  variables:
+    - name: sessionToken
+      value: 85e093be4ddbe368fc42845cefa8f2fc9fed46e6830bfefcf2e7e9c7226b3553
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

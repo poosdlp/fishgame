@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { QRCode } from 'react-qr-code';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import QRCodeImport from 'react-qr-code';
+const QRCode = (QRCodeImport as any).default || QRCodeImport;
 import { apiUrl } from './api';
 
 interface AuthProps {

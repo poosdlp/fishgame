@@ -1,4 +1,6 @@
-import { QRCode } from 'react-qr-code';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import QRCodeImport from 'react-qr-code';
+const QRCode = (QRCodeImport as any).default || QRCodeImport;
 
 interface QRCodePopupProps {
   value: string;

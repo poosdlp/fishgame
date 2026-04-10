@@ -8,7 +8,7 @@ const sessionSchema = new mongoose.Schema({
     default: 'pending'
   },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  expiresAt: { type: Date, required: true, index: true },
+  expiresAt: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now }
 });
 

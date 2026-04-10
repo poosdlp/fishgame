@@ -13,7 +13,7 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<{ id: string; email: string; username: string } | null>(null)
   const [showQR, setShowQR] = useState(false)
 
   useEffect(() => {
