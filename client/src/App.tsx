@@ -1,5 +1,4 @@
-import { use, useState } from "react";
-import { useEffect } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
@@ -13,7 +12,7 @@ const LakeHeight = 500;
 
 let tempfish;
 
-type GameState = "bite" | "caught" | "waiting"| "none";
+type GameState = "none" | "connecting" | "waiting" | "bite" | "caught";
 
 
 type LeaderboardTab = "leaderboard" | "recent";
@@ -62,6 +61,10 @@ function loadimages() {
 function App() {
   const [state, setState] = useState<GameState>("none");
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [mobileConnected, setMobileConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
   const [bobber, setBobber] = useState<{x: number, y: number} | null>(null);
 
   const [showInventory, setShowInventory] = useState(false);
@@ -495,38 +498,83 @@ function App() {
 
           {state === "none" && (
 
-            <button onClick={() => {
-              const newSessionId = crypto.randomUUID();
+            <button onClick={async () => {
+              // create session on server
+              const res = await fetch('http://localhost:5555/session', { method: 'POST' });
+              const { sessionId: newSessionId, token } = await res.json();
               setSessionId(newSessionId);
-              setState("waiting");
-              const count = Math.floor(Math.random() * 5) + 2; // random 2-6
-              const newFishArray: Fishy[] = []; // create an array to hold new fish
-                for (let i = 0; i < count; i++) {
-                  const newFishList = createFish();
-                  newFishArray.push(newFishList); // add each new fish to the array
+              setSessionToken(token);
+              setState("connecting");
+
+              // open WebSocket and wait for mobile to authenticate
+              const ws = new WebSocket(`ws://localhost:5555/session/${newSessionId}`);
+              wsRef.current = ws;
+              ws.onmessage = (e) => {
+                const { event } = JSON.parse(e.data);
+                if (event === 'authenticated') {
+                  setMobileConnected(true);
+                  const count = Math.floor(Math.random() * 5) + 2;
+                  const newFishArray: Fishy[] = [];
+                  for (let i = 0; i < count; i++) newFishArray.push(createFish());
+                  setFishInLake(newFishArray);
+                  const randindex = Math.floor(Math.random() * newFishArray.length);
+                  setTargetFishId(newFishArray[randindex].id);
+                  setBobber({
+                    x: Math.random() * (LakeWidth - 100) + 50,
+                    y: Math.random() * (LakeHeight - 100) + 50,
+                  });
+                  setState("waiting");
+                } else if (event === 'reel') {
+                  setState(prev => prev === 'bite' ? 'caught' : prev);
                 }
-                setFishInLake(newFishArray);
-                //pick fish to bite
-                const randindex= Math.floor(Math.random() * newFishArray.length);
-                setTargetFishId(newFishArray[randindex].id);
-
-
-                setBobber({
-                  x: Math.random() * (LakeWidth - 100) + 50,
-                  y: Math.random() * (LakeHeight - 100) + 50,
-                });
+              };
+              ws.onclose = () => console.log('WS closed');
             }}>Play</button>
             
           )}
+          {/* Connecting — show QR and wait for mobile auth */}
+          {state === "connecting" && sessionId && sessionToken && (
+            <div className="qr-backdrop">
+              <div className="qr-popup">
+                <div className="qr-section">
+                  <p className="qr-section-label">Scan to play</p>
+                  <QRCodeSVG value={`${window.location.origin}/session/${sessionId}?token=${sessionToken}`} size={200} />
+                  <p className="qr-waiting-text">Waiting for mobile to connect...</p>
+                </div>
+                <div className="qr-divider"><span>or download the app</span></div>
+                <div className="qr-platform-buttons">
+                  <a className="qr-platform-btn" href="/downloads/fishtale-android.apk" download>🤖 Android</a>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Waiting */}
           {state === "waiting" && (
             <>
-              <WaitingForABite onFishBite={() => setState("bite")} />
-              {sessionId && (
+              <WaitingForABite onFishBite={() => {
+                wsRef.current?.send(JSON.stringify({ event: 'bite' }));
+                setState("bite");
+              }} />
+              {!mobileConnected && sessionId && sessionToken && (
                 <div className="qr-backdrop">
                   <div className="qr-popup">
-                    <p className="qr-label">Scan to join on mobile</p>
-                    <QRCodeSVG value={`${window.location.origin}/session/${sessionId}`} size={200} />
+
+                    <div className="qr-section">
+                      <p className="qr-section-label">Scan to play</p>
+                      <QRCodeSVG value={`${window.location.origin}/session/${sessionId}?token=${sessionToken}`} size={200} />
+                    </div>
+
+                    <div className="qr-divider">
+                      <span>or download the app</span>
+                    </div>
+
+                    <div className="qr-platform-buttons">
+                      <a className="qr-platform-btn" href="/downloads/fishtale-android.apk" download>
+                        🤖 Android
+                      </a>
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -535,13 +583,23 @@ function App() {
 
           {/* Bite */}
           {state === "bite" && (
-            <BiteAlert onCatch={() => setState("caught")} />
+            <BiteAlert onCatch={() => {
+              wsRef.current?.send(JSON.stringify({ event: 'bite' }));
+              setState("caught");
+            }} />
           )}
 
           {/* Caught */}
           {state === "caught" && (
             <>
-              <CaughtFish onReset={() => setState("none")} />
+              <CaughtFish onReset={() => {
+                wsRef.current?.close();
+                wsRef.current = null;
+                setSessionId(null);
+                setSessionToken(null);
+                setMobileConnected(false);
+                setState("none");
+              }} />
             </>
           )}
 
