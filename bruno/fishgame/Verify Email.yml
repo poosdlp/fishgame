@@ -1,0 +1,19 @@
+info:
+  name: Verify Email
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: http://{{baseurl}}/api/auth/verify-email?token=token=71180d2e37ddeb93302894d6758ae2587c933e22cb7efe5439b9f2526f1243c2
+  params:
+    - name: token
+      value: token=71180d2e37ddeb93302894d6758ae2587c933e22cb7efe5439b9f2526f1243c2
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

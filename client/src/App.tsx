@@ -3,6 +3,9 @@ import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import Auth from './Auth'
+import VerifyEmail from './VerifyEmail'
+import ResetPassword from './ResetPassword'
+import ForgotPassword from './ForgotPassword'
 import { apiUrl } from './api'
 import './App.css'
 
@@ -18,7 +21,10 @@ function App() {
 
   const checkAuthStatus = async () => {
     try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
       const response = await fetch(apiUrl('/api/auth/me'), {
+        headers: { 'Authorization': `Bearer ${token}` },
         credentials: 'include'
       })
       if (response.ok) {
@@ -49,6 +55,18 @@ function App() {
     localStorage.removeItem('accessToken')
     setIsAuthenticated(false)
     setUser(null)
+  }
+
+  if (window.location.pathname === '/verify-email') {
+    return <VerifyEmail />
+  }
+
+  if (window.location.pathname === '/reset-password') {
+    return <ResetPassword />
+  }
+
+  if (window.location.pathname === '/forgot-password') {
+    return <ForgotPassword />
   }
 
   if (!isAuthenticated) {

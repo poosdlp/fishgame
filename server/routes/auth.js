@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -12,6 +13,7 @@ const {
   persistRefreshToken,
   setRefreshCookie
 } = require('../utils/tokens');
+const emailUtil = require('../utils/email');
 
 const router = express.Router();
 
@@ -25,8 +27,11 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new User({ username, email, password: hashedPassword });
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const newUser = new User({ username, email, password: hashedPassword, emailVerificationToken: verificationToken });
     await newUser.save();
+
+    emailUtil.sendEmailVerificationEmail(email, verificationToken);
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
@@ -44,6 +49,10 @@ router.post('/login', async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+
+    if (!user.emailVerified) {
+      return res.status(400).json({ message: 'Please verify your email first' });
+    }
 
     const accessToken = signAccessToken(user);
 
@@ -124,6 +133,66 @@ router.get('/me', auth, async (req, res) => {
     const user = await User.findById(req.user.id).select('username email');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ id: user._id, email: user.email, username: user.username });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Forgot password and reset password
+router.post('/forgot-password', async (req, res) => {
+  const { token } = req.query;
+  // If token is provided, this is a password reset request
+  if (token) {
+    try {
+      const user = await User.findOne({ resetToken: token, resetTokenExpires: { $gt: Date.now() } });
+      if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+
+      const { password } = req.body;
+      user.password = await bcrypt.hash(password, 10);
+      user.resetToken = undefined;
+      user.resetTokenExpires = undefined;
+      await user.save();
+
+      res.json({ message: 'Password reset successful' });
+    } catch (err) {
+      res.status(500).json({ message: 'Server error' });
+    }
+    return;
+  }
+
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Generate a password reset token and send an email
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetToken = resetToken;
+    user.resetTokenExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    await emailUtil.sendPasswordResetEmail(user.email, resetToken);
+
+    res.json({ message: 'Password reset instructions sent to your email' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Email verification endpoint
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ message: 'No token provided' });
+
+    const user = await User.findOne({ emailVerificationToken: token });
+    if (!user) return res.status(400).json({ message: 'Invalid token' });
+
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save();
+
+    res.json({ message: 'Email verified successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }

@@ -37,7 +37,7 @@ export default function Auth({ onLogin }: AuthProps) {
         if (isLogin) {
           onLogin(data.accessToken);
         } else {
-          setMessage('Registration successful! You can now log in.');
+          setMessage('Registration successful! Check your email to verify your account, then log in.');
           setIsLogin(true);
         }
       } else {
@@ -94,6 +94,12 @@ export default function Auth({ onLogin }: AuthProps) {
         </form>
 
         {message && <div className="message">{message}</div>}
+
+        {isLogin && (
+          <div className="auth-toggle">
+            <a href="/forgot-password">Forgot password?</a>
+          </div>
+        )}
 
         <div className="auth-toggle">
           <button onClick={() => setIsLogin(!isLogin)}>
