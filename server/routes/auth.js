@@ -127,17 +127,6 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// Who am I endpoint
-router.get('/me', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('username email');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json({ id: user._id, email: user.email, username: user.username });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 // Forgot password and reset password
 router.post('/forgot-password', async (req, res) => {
   const { token } = req.query;

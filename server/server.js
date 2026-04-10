@@ -21,5 +21,8 @@ app.use('/auth', authRoutes);
 const profileRoutes = require('./routes/profile');
 app.use('/profile', profileRoutes);
 
+const sessionRoutes = require('./routes/session');
+app.use('/session', sessionRoutes);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

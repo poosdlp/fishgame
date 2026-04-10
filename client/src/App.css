@@ -299,3 +299,33 @@ button:disabled {
 .header button:hover {
   background: var(--accent-hover);
 }
+
+.qr-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.qr-popup {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  position: relative;
+}
+
+.qr-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: auto;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+}

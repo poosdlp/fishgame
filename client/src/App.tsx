@@ -6,6 +6,7 @@ import Auth from './Auth'
 import VerifyEmail from './VerifyEmail'
 import ResetPassword from './ResetPassword'
 import ForgotPassword from './ForgotPassword'
+import QRCodePopup from './QRCode'
 import { apiUrl } from './api'
 import './App.css'
 
@@ -13,6 +14,7 @@ function App() {
   const [count, setCount] = useState(0)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState(null)
+  const [showQR, setShowQR] = useState(false)
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -23,7 +25,7 @@ function App() {
     try {
       const token = localStorage.getItem('accessToken')
       if (!token) return
-      const response = await fetch(apiUrl('/api/auth/me'), {
+      const response = await fetch(apiUrl('/api/profile/me'), {
         headers: { 'Authorization': `Bearer ${token}` },
         credentials: 'include'
       })
@@ -77,8 +79,13 @@ function App() {
     <>
       <div className="header">
         <span>Welcome, {user?.username || user?.email}!</span>
+        <button onClick={() => setShowQR(true)}>QR Code</button>
         <button onClick={handleLogout}>Logout</button>
       </div>
+
+      {showQR && user?.username && (
+        <QRCodePopup value={user.username} onClose={() => setShowQR(false)} />
+      )}
 
       <section id="center">
         <div className="hero">
