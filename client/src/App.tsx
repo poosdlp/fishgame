@@ -61,7 +61,6 @@ function loadimages() {
 function App() {
   const [state, setState] = useState<GameState>("none");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [mobileConnected, setMobileConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -501,9 +500,8 @@ function App() {
             <button onClick={async () => {
               // create session on server
               const res = await fetch('http://localhost:5555/session', { method: 'POST' });
-              const { sessionId: newSessionId, token } = await res.json();
+              const { sessionId: newSessionId } = await res.json();
               setSessionId(newSessionId);
-              setSessionToken(token);
               setState("connecting");
 
               // open WebSocket and wait for mobile to authenticate
@@ -533,12 +531,12 @@ function App() {
             
           )}
           {/* Connecting — show QR and wait for mobile auth */}
-          {state === "connecting" && sessionId && sessionToken && (
+          {state === "connecting" && sessionId && (
             <div className="qr-backdrop">
               <div className="qr-popup">
                 <div className="qr-section">
                   <p className="qr-section-label">Scan to play</p>
-                  <QRCodeSVG value={`${window.location.origin}/session/${sessionId}?token=${sessionToken}`} size={200} />
+                  <QRCodeSVG value={`${window.location.origin}/session/${sessionId}`} size={200} />
                   <p className="qr-waiting-text">Waiting for mobile to connect...</p>
                 </div>
                 <div className="qr-divider"><span>or download the app</span></div>
@@ -556,13 +554,13 @@ function App() {
                 wsRef.current?.send(JSON.stringify({ event: 'bite' }));
                 setState("bite");
               }} />
-              {!mobileConnected && sessionId && sessionToken && (
+              {!mobileConnected && sessionId && (
                 <div className="qr-backdrop">
                   <div className="qr-popup">
 
                     <div className="qr-section">
                       <p className="qr-section-label">Scan to play</p>
-                      <QRCodeSVG value={`${window.location.origin}/session/${sessionId}?token=${sessionToken}`} size={200} />
+                      <QRCodeSVG value={`${window.location.origin}/session/${sessionId}`} size={200} />
                     </div>
 
                     <div className="qr-divider">
@@ -596,7 +594,6 @@ function App() {
                 wsRef.current?.close();
                 wsRef.current = null;
                 setSessionId(null);
-                setSessionToken(null);
                 setMobileConnected(false);
                 setState("none");
               }} />

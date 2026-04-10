@@ -46,9 +46,19 @@ app.get('/', (req, res) => {
 app.post('/session', (_req, res) => {
   const sessionId = crypto.randomUUID();
   const token = crypto.randomBytes(32).toString('hex');
-  sessions[sessionId] = { token, clients: new Set() };
+  sessions[sessionId] = { token, clients: new Set(), claimed: false };
   console.log(`Session created: ${sessionId}`);
-  res.json({ sessionId, token });
+  res.json({ sessionId });
+});
+
+// Join a session — called by the mobile scanner after reading the QR code
+// Returns the token once, then marks the session as claimed
+app.post('/session/:sessionId/join', (req, res) => {
+  const session = sessions[req.params.sessionId];
+  if (!session) return res.status(404).json({ error: 'Unknown session' });
+  if (session.claimed) return res.status(403).json({ error: 'Session already claimed' });
+  session.claimed = true;
+  res.json({ token: session.token });
 });
 
 // start the server
