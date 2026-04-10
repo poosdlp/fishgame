@@ -190,3 +190,88 @@
 .right-tab {
   left: -30px;
 }
+
+/* INVENTORY */
+.inventory-empty {
+  padding: 20px;
+  text-align: center;
+  color: #ddb8d8;
+  font-size: 0.9rem;
+}
+
+.inventory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+}
+
+.fish-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.fish-card-img-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 50px;
+  height: 35px;
+}
+
+.fish-card-img {
+  width: 50px;
+  height: 35px;
+  object-fit: contain;
+}
+
+.fish-card-qty {
+  position: absolute;
+  bottom: -4px;
+  right: -6px;
+  background: #7d4071;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 8px;
+  line-height: 1.4;
+}
+
+.fish-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fish-card-name {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fish-card-rarity {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.fish-card-stats {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #e2c4df;
+  margin-top: 2px;
+}

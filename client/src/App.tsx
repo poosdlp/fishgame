@@ -36,7 +36,8 @@ type Fishy = {
   name: string;
   rarity: FishTemplate["rarity"];
   weight: number | "how rude to ask";
-  length: number;
+  length: number
+  points: number;
 
   x: number;
   y: number;
@@ -66,7 +67,14 @@ function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("leaderboard");
   const isAnySidebarOpen = showInventory || showLeaderboard;
-  const [inventory, setInventory] = useState<Fishy[]>([]);
+  const [inventory, setInventory] = useState<Fishy[]>([
+    { id: "filler-1", name: "Salmon", rarity: "common", length: 32, weight: 8, points: 10, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 3 },
+    { id: "filler-2", name: "Tuna", rarity: "uncommon", length: 55, weight: 18, points: 100, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 3 },
+    { id: "filler-3", name: "Pufferfish", rarity: "rare", length: 44, weight: 12, points: 1000, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 4 },
+    { id: "filler-4", name: "Golden Koi", rarity: "legendary", length: 72, weight: 30, points: 10000, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 5 },
+    { id: "filler-5", name: "Dragonfish", rarity: "mythical", length: 15, weight: 2, points: 100000, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 7 },
+    { id: "filler-6", name: "livia fish", rarity: "the one that got away", length: 170, weight: "how rude to ask", points: 9999999, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 3 },
+  ]);
   const [fishInLake, setFishInLake] = useState<Fishy[]>([]);
   const [targetFishId, setTargetFishId] = useState<string | null>(null);
   const hoverQueueRef = useRef<string[]>([]);
@@ -80,11 +88,11 @@ function App() {
   { name: "Anglerfish", rarity: "rare" },
   { name: "Golden Koi", rarity: "legendary" },
   { name: "Dragonfish", rarity: "mythical" },
-  { name: "livia fish", rarity: "the one that got away", length: 170, weight: "how rude to ask"},
-  { name: "axel fish", rarity: "the one that got away", length: 150, weight: "how rude to ask"},
-  { name: "marcus fish", rarity: "the one that got away", length: 160, weight: "how rude to ask"},
-  { name: "jake fish", rarity: "the one that got away", length: 140, weight: "how rude to ask"},
-  { name: "josh fish", rarity: "the one that got away", length: 180, weight: "how rude to ask"},
+  { name: "livia fish", rarity: "the one that got away", length: 170, weight: "how rude to ask", points: 9999999},
+  { name: "axel fish", rarity: "the one that got away", length: 150, weight: "how rude to ask", points: 9999999},
+  { name: "marcus fish", rarity: "the one that got away", length: 160, weight: "how rude to ask", points: 9999999},
+  { name: "jake fish", rarity: "the one that got away", length: 140, weight: "how rude to ask", points: 9999999},
+  { name: "josh fish", rarity: "the one that got away", length: 180, weight: "how rude to ask", points: 9999999},
 
 ];
 
@@ -464,6 +472,7 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
         rarity: fish.rarity,
         length: fish.length,   
         weight: fish.weight ,
+        points: fish.points ,
 
       // spawn outside the lake so it has to swim in
         x,y,
@@ -488,6 +497,12 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
 
     const weight = Math.round(length * (Math.random() * 0.5 + 0.02)); // weight is based on length with some randomness 
 
+    const points=
+      fish.rarity === "common" ? Math.floor(Math.random() * 40) + 20 :
+      fish.rarity === "uncommon" ? Math.floor(Math.random() * 50) + 30 :
+      fish.rarity === "rare" ? Math.floor(Math.random() * 60) + 40 :
+      fish.rarity === "legendary" ? Math.floor(Math.random() * 80) + 50 :
+      Math.floor(Math.random() * 20) + 10;
 
   return {
     id: crypto.randomUUID(),
@@ -495,6 +510,7 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
     rarity: fish.rarity as Fishy["rarity"],
     length: length,
     weight: weight,
+    points: points,
 
     x,
     y,
@@ -545,7 +561,7 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
               {showInventory && (
                 <>
                   <h2>Inventory</h2>
-                  <Inventory />
+                  <Inventory fish={inventory} />
                 </>
               )}
             </div>
