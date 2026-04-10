@@ -17,10 +17,14 @@
 
 .game-screen {
   display: flex;
-  justify-content: center;
+  flex-direction: column;   /* stack button + lake */
+  justify-content: flex-start; /* push to top */
+  align-items: center;      /* keep centered horizontally */
+  height: 80vh;
+  /* justify-content: center;
   align-items: center;
   height: 80vh;
-  font-size: 2rem;
+  font-size: 2rem; */
 }
 
 .lake{
@@ -31,9 +35,11 @@
   overflow: hidden;
   border: 3px solid #0f4c8a;
 
-  margin: auto;
+  margin: 20px auto; /* keeps it centered horizontally */
+
+  /* margin: auto;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%); */
 }
 .fish{
   position: absolute;
