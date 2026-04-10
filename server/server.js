@@ -136,6 +136,75 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+// Get all inventory (caught fish)
+app.get('/inventory', async (_req, res) => {
+  try {
+    const fish = await db.collection('catches')
+      .find({}, { projection: { name: 1, rarity: 1, weight: 1, length: 1, caughtAt: 1 } })
+      .sort({ caughtAt: -1 })
+      .toArray();
+    res.json(fish.map(f => ({ ...f, id: f._id, _id: undefined })));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch inventory' });
+  }
+});
+
+// Release (delete) a fish from inventory
+app.delete('/inventory/:id', async (req, res) => {
+  const { ObjectId } = require('mongodb');
+  try {
+    const result = await db.collection('catches').deleteOne({ _id: new ObjectId(req.params.id) });
+    if (result.deletedCount === 0) return res.status(404).json({ error: 'Fish not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to release fish' });
+  }
+});
+
+// Record a caught fish
+app.post('/catch', async (req, res) => {
+  const { name, rarity, weight, length, player } = req.body;
+  if (!name || !rarity || !player) return res.status(400).json({ error: 'Missing fish data' });
+  try {
+    const result = await db.collection('catches').insertOne({
+      name, rarity, weight, length, player,
+      caughtAt: new Date(),
+    });
+    res.json({ id: result.insertedId });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save catch' });
+  }
+});
+
+// Top 10 players by number of fish caught
+app.get('/leaderboard', async (_req, res) => {
+  try {
+    const top = await db.collection('catches').aggregate([
+      { $group: { _id: '$player', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+      { $project: { _id: 0, player: '$_id', count: 1 } },
+    ]).toArray();
+    res.json(top);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
+// 10 most recent catches
+app.get('/recent', async (_req, res) => {
+  try {
+    const recent = await db.collection('catches')
+      .find({}, { projection: { _id: 0, name: 1, rarity: 1, weight: 1, length: 1, caughtAt: 1 } })
+      .sort({ caughtAt: -1 })
+      .limit(10)
+      .toArray();
+    res.json(recent);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch recent catches' });
+  }
+});
+
 // shutdown
 process.on('SIGINT', async () => {
   console.log('\nStop signal received: Closing MongoDB connection...');

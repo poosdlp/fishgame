@@ -2,7 +2,8 @@ import { use, useState, useRef, useEffect } from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
-import {Inventory } from './components/inventory';
+import { Inventory } from './components/inventory';
+import { FirstCatchPopup } from './components/firstcatchpopup';
 import { QRCodeSVG } from 'qrcode.react';
 
 import './App.css'
@@ -32,6 +33,7 @@ type FishTemplate =
 type FishBehavior = "swimming" | "attracted" | "hovering" | "bite" | "caught";
 type Fishy = {
   id: string;
+  dbId?: string;
   name: string;
   rarity: FishTemplate["rarity"];
   weight: number | "how rude to ask";
@@ -71,6 +73,10 @@ function App() {
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("leaderboard");
   const isAnySidebarOpen = showInventory || showLeaderboard;
   const [inventory, setInventory] = useState<Fishy[]>([]);
+  const [firstCatchFish, setFirstCatchFish] = useState<Fishy | null>(null);
+  const [playerName, setPlayerName] = useState<string>(() => localStorage.getItem('playerName') ?? '');
+  const [nameInput, setNameInput] = useState('');
+  const [leaderboard, setLeaderboard] = useState<{ player: string; count: number }[]>([]);
   const [fishInLake, setFishInLake] = useState<Fishy[]>([]);
   const [targetFishId, setTargetFishId] = useState<string | null>(null);
 
@@ -92,6 +98,31 @@ function App() {
 ];
 
  useEffect(() => {
+    fetch('http://localhost:5555/inventory')
+      .then(r => r.json())
+      .then((fish: { id: string; name: string; rarity: Fishy["rarity"]; weight: number; length: number }[]) => {
+        setInventory(fish.map(f => ({
+          dbId: f.id,
+          id: f.id,
+          name: f.name,
+          rarity: f.rarity,
+          weight: f.weight,
+          length: f.length,
+          x: 0, y: 0, vx: 0, vy: 0,
+          behavior: "caught" as FishBehavior,
+          tapCount: 0, tapCooldown: 0, isDiving: false,
+        })));
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!showLeaderboard) return;
+    fetch('http://localhost:5555/leaderboard')
+      .then(r => r.json())
+      .then(setLeaderboard);
+  }, [showLeaderboard]);
+
+  useEffect(() => {
     let animationId: number;
     let time = 0;
 
@@ -365,8 +396,21 @@ function App() {
 
   const catchFish = (fish: Fishy) => {
     const newFish = createFish();
-    setInventory(prev => [...prev, newFish]);
+    const isFirstCatch = !inventory.some(f => f.name === fish.name);
+    if (isFirstCatch) setFirstCatchFish(fish);
     setState("caught");
+    fetch('http://localhost:5555/catch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: fish.name, rarity: fish.rarity, weight: fish.weight, length: fish.length, player: playerName }),
+    })
+      .then(r => r.json())
+      .then(({ id }) => setInventory(prev => [...prev, { ...newFish, dbId: id }]));
+  }
+
+  const releaseFish = (dbId: string) => {
+    fetch(`http://localhost:5555/inventory/${dbId}`, { method: 'DELETE' });
+    setInventory(prev => prev.filter(f => f.dbId !== dbId));
   }
 
 
@@ -401,7 +445,7 @@ function App() {
               {showInventory && (
                 <>
                   <h2>Inventory</h2>
-                  <Inventory />
+                  <Inventory fish={inventory} onRelease={releaseFish} />
                 </>
               )}
             </div>
@@ -441,8 +485,10 @@ function App() {
 
               {activeTab === "leaderboard" && (
                 <div>
-                  <p>Player1 - 10 fish</p>
-                  <p>Player2 - 8 fish</p>
+                  {leaderboard.length === 0 && <p>No catches yet!</p>}
+                  {leaderboard.map((entry, i) => (
+                    <p key={entry.player}>{i + 1}. {entry.player} — {entry.count} fish</p>
+                  ))}
                 </div>
               )}
 
@@ -496,8 +542,25 @@ function App() {
           {/* Start screen */}
 
           {state === "none" && (
-
-            <button onClick={async () => {
+            <>
+              {!playerName && (
+                <div>
+                  <input
+                    placeholder="Enter your name"
+                    value={nameInput}
+                    onChange={e => setNameInput(e.target.value)}
+                  />
+                  <button
+                    disabled={!nameInput.trim()}
+                    onClick={() => {
+                      const name = nameInput.trim();
+                      localStorage.setItem('playerName', name);
+                      setPlayerName(name);
+                    }}
+                  >Confirm</button>
+                </div>
+              )}
+            <button disabled={!playerName} onClick={async () => {
               // create session on server
               const res = await fetch('http://localhost:5555/session', { method: 'POST' });
               const { sessionId: newSessionId } = await res.json();
@@ -528,7 +591,7 @@ function App() {
               };
               ws.onclose = () => console.log('WS closed');
             }}>Play</button>
-            
+            </>
           )}
           {/* Connecting — show QR and wait for mobile auth */}
           {state === "connecting" && sessionId && (
@@ -585,6 +648,11 @@ function App() {
               wsRef.current?.send(JSON.stringify({ event: 'bite' }));
               setState("caught");
             }} />
+          )}
+
+          {/* First catch popup */}
+          {firstCatchFish && (
+            <FirstCatchPopup fish={firstCatchFish} onClose={() => setFirstCatchFish(null)} />
           )}
 
           {/* Caught */}
