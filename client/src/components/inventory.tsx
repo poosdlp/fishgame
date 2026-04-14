@@ -33,12 +33,16 @@ export function Inventory({ fish }: Props) {
     );
   }
 
-  // Group fish by name, keeping the first caught as the representative entry
+  // Group fish by name, keeping the best catch (highest points) as the representative entry
   const grouped = fish.reduce<Map<string, InventoryFish & { quantity: number }>>(
     (map, f) => {
       const existing = map.get(f.name);
       if (existing) {
         existing.quantity += 1;
+        if (f.points > existing.points) {
+          const qty = existing.quantity;
+          map.set(f.name, { ...f, quantity: qty });
+        }
       } else {
         map.set(f.name, { ...f, quantity: 1 });
       }
@@ -65,6 +69,9 @@ export function Inventory({ fish }: Props) {
             >
               {f.rarity}
             </div>
+            {f.quantity > 1 && (
+              <div className="fish-card-best">Best catch</div>
+            )}
             <div className="fish-card-stats">
               <span>📏 {f.length} cm</span>
               <span>

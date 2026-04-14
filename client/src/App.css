@@ -18,22 +18,20 @@
 .game-screen {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 80vh;
+  align-items: flex-start;
+  overflow: auto;
+  padding: 16px;
   font-size: 2rem;
 }
 
-.lake{
+.lake {
   position: relative;
-  width: 800px;
-  height: 500px;
+  width: 1200px;
+  height: 700px;
+  flex-shrink: 0;
   background: linear-gradient(to bottom, #4fc3f7, #01579b);
   overflow: hidden;
   border: 3px solid #0f4c8a;
-
-  margin: auto;
-  top: 50%;
-  transform: translateY(-50%);
 }
 .fish{
   position: absolute;
@@ -274,4 +272,131 @@
   font-size: 0.75rem;
   color: #e2c4df;
   margin-top: 2px;
+}
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 12px;
+}
+
+.lb-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.lb-tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 6px;
+  background: #88a5cd;
+  color: white;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lb-tab.active {
+  background: #38bdf8;
+}
+
+.lb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lb-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ddb8d8;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.lb-medal {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.lb-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lb-row-name {
+  font-size: 0.85rem;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-row-value {
+  font-size: 0.72rem;
+  color: #e2c4df;
+}
+
+.lb-empty {
+  font-size: 0.8rem;
+  color: #ddb8d8;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.fish-dot {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: orange;
+  border-radius: 50%;
+}
+
+.fish-dot-hover {
+  animation: fish-bob 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes fish-bob {
+  from { transform: translateY(-3px); }
+  to   { transform: translateY(3px);  }
+}
+
+.bobber {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: red;
+  border-radius: 50%;
+  border: 3px solid white;
+  z-index: 10;
+  transition: transform 0.1s ease;
+}
+
+.bobber-bite {
+  animation: bobber-dunk 0.4s ease infinite alternate;
+}
+
+@keyframes bobber-dunk {
+  from { transform: translateY(0);   background: red; }
+  to   { transform: translateY(6px); background: #ff6600; }
+}
+
+.fish-card-best {
+  font-size: 0.65rem;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
 }

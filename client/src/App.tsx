@@ -2,34 +2,46 @@ import { use, useRef, useState } from "react";
 import { useEffect } from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
-import { WaitingForABite } from './components/waitingforabite';
-import {Inventory } from './components/inventory';
+import { Inventory } from './components/inventory';
+import { Leaderboard } from './components/leaderboard';
+import { fishTypes } from './data/fishTypes';
+import type { FishTemplate } from './data/fishTypes';
 
 import './App.css'
 
-const LakeWidth = 800;
-const LakeHeight = 500;
+const LakeWidth = 1200;
+const LakeHeight = 700;
+
+// Clamps fish position to lake bounds, but only zeroes velocity when moving outward.
+// This prevents fish from pinballing off walls while still allowing them to swim in from outside.
+function applyBoundaries(x: number, y: number, vx: number, vy: number) {
+  let cx = x, cy = y, cvx = vx, cvy = vy;
+  if (cx < 0          && cvx < 0) { cx = 0;          cvx = 0; }
+  if (cx > LakeWidth  && cvx > 0) { cx = LakeWidth;  cvx = 0; }
+  if (cy < 0          && cvy < 0) { cy = 0;          cvy = 0; }
+  if (cy > LakeHeight && cvy > 0) { cy = LakeHeight; cvy = 0; }
+  return { x: cx, y: cy, vx: cvx, vy: cvy };
+}
 
 let tempfish;
 
+// Game states:
+// none    — idle, no fishing in progress
+// waiting — bobber is cast, fish are swimming
+// bite    — a fish has committed to biting, waiting for player to react
+// caught  — player successfully caught a fish, showing result screen
 type GameState = "bite" | "caught" | "waiting"| "none";
 
 
-type LeaderboardTab = "leaderboard" | "recent";
 type inventorytab = "fish" | "journals";
 
-type FishTemplate =
-  | {
-      name: string;
-      rarity: "common" | "uncommon" | "rare" | "legendary" | "mythical";
-    }
-  | {
-      name: string;
-      rarity: "the one that got away";
-      length: number;
-      weight: "how rude to ask";
-    };
 
+// Fish behavior state machine:
+// swimming  → attracted (enters bobber radius)
+// attracted → hovering  (reaches hover radius)
+// hovering  → bite      (selected fish reaches requiredTaps, passes 50/50 check)
+// hovering  → hovering  (selected fish fails 50/50 check, resets target)
+// bite      → caught    (player clicks Catch Fish!)
 type FishBehavior = "swimming" | "attracted" | "hovering" | "bite" | "caught";
 type Fishy = {
   id: string;
@@ -46,18 +58,30 @@ type Fishy = {
   behavior: FishBehavior;
   tapCount: number;
   tapCooldown: number;
-  requiredTaps: number;
+  requiredTaps: number; // frames the selected fish must hover before attempting to bite
 
 };
 
 function loadimages() {
- 
-  
+
+
 
   tempfish = new Image();
   tempfish.src = "/tempfish.png";
 }
 
+
+const API = "http://localhost:5555";
+
+// Retrieves or prompts for the player name, persisted in localStorage
+function getPlayerName(): string {
+  let name = localStorage.getItem("playerName");
+  if (!name) {
+    name = prompt("Enter your player name:") || "Angler";
+    localStorage.setItem("playerName", name);
+  }
+  return name;
+}
 
 function App() {
   const [state, setState] = useState<GameState>("none");
@@ -65,37 +89,44 @@ function App() {
 
   const [showInventory, setShowInventory] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [activeTab, setActiveTab] = useState<LeaderboardTab>("leaderboard");
   const isAnySidebarOpen = showInventory || showLeaderboard;
-  const [inventory, setInventory] = useState<Fishy[]>([
-    { id: "filler-1", name: "Salmon", rarity: "common", length: 32, weight: 8, points: 10, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 3 },
-    { id: "filler-2", name: "Tuna", rarity: "uncommon", length: 55, weight: 18, points: 100, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 3 },
-    { id: "filler-3", name: "Pufferfish", rarity: "rare", length: 44, weight: 12, points: 1000, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 4 },
-    { id: "filler-4", name: "Golden Koi", rarity: "legendary", length: 72, weight: 30, points: 10000, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 5 },
-    { id: "filler-5", name: "Dragonfish", rarity: "mythical", length: 15, weight: 2, points: 100000, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 7 },
-    { id: "filler-6", name: "livia fish", rarity: "the one that got away", length: 170, weight: "how rude to ask", points: 9999999, x: 0, y: 0, vx: 0, vy: 0, behavior: "caught", tapCount: 0, tapCooldown: 0, requiredTaps: 3 },
-  ]);
+  const [inventory, setInventory] = useState<Fishy[]>([]);
   const [fishInLake, setFishInLake] = useState<Fishy[]>([]);
-  const [targetFishId, setTargetFishId] = useState<string | null>(null);
-  const hoverQueueRef = useRef<string[]>([]);
+  const [lastCaughtFish, setLastCaughtFish] = useState<Fishy | null>(null);
+  const bitingFishRef = useRef<Fishy | null>(null);
+  // stateRef mirrors `state` for use inside the animation loop (avoids stale closure)
+  const stateRef = useRef(state);
+  // targetFishIdRef holds the id of the fish currently selected to attempt a bite.
+  // null means no fish is targeted yet.
+  const targetFishIdRef = useRef<string | null>(null);
+  // counts frames where 2+ fish are hovering; resets if the count drops below 2
+  const hoverGatherTimeRef = useRef(0);
+  useEffect(() => { stateRef.current = state; }, [state]);
 
-//temp fish data for testing inventory
-  const fishTypes: FishTemplate[] = [
-  { name: "Salmon", rarity: "common" },
-  { name: "Tuna", rarity: "uncommon" },
-  { name: "Bass", rarity: "common" },
-  { name: "Pufferfish", rarity: "rare" },
-  { name: "Anglerfish", rarity: "rare" },
-  { name: "Golden Koi", rarity: "legendary" },
-  { name: "Dragonfish", rarity: "mythical" },
-  { name: "livia fish", rarity: "the one that got away", length: 170, weight: "how rude to ask", points: 9999999},
-  { name: "axel fish", rarity: "the one that got away", length: 150, weight: "how rude to ask", points: 9999999},
-  { name: "marcus fish", rarity: "the one that got away", length: 160, weight: "how rude to ask", points: 9999999},
-  { name: "jake fish", rarity: "the one that got away", length: 140, weight: "how rude to ask", points: 9999999},
-  { name: "josh fish", rarity: "the one that got away", length: 180, weight: "how rude to ask", points: 9999999},
+  // Load inventory from server on mount
+  useEffect(() => {
+    const playerName = getPlayerName();
+    fetch(`${API}/inventory/${encodeURIComponent(playerName)}`)
+      .then(r => r.json())
+      .then((data: Array<{id: string; name: string; rarity: Fishy["rarity"]; points: number; weight: number | null; length: number}>) => {
+        const loaded: Fishy[] = data.map(f => ({
+          id: f.id,
+          name: f.name,
+          rarity: f.rarity,
+          points: f.points,
+          weight: f.weight === null ? "how rude to ask" : f.weight,
+          length: f.length,
+          x: 0, y: 0, vx: 0, vy: 0,
+          behavior: "caught",
+          tapCount: 0, tapCooldown: 0, requiredTaps: 0,
+        }));
+        setInventory(loaded);
+      })
+      .catch(err => console.error("Failed to load inventory:", err));
+  }, []);
 
-];
 
+// bobberRef mirrors `bobber` state for use inside the animation loop (avoids stale closure)
 const bobberRef = useRef<{ x: number; y: number } | null>(null);
 
 
@@ -105,51 +136,54 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
     let time = 0;
 
     const update = () => {
-      time += 1; 
+      time += 1;
 
-      if(!targetFishId && hoverQueueRef.current.length===2 ){
-          const rand = Math.floor(Math.random() * 2);
-            setTargetFishId(hoverQueueRef.current[rand]);
-        }
-        if(!targetFishId && hoverQueueRef.current.length===1){
-          const firstfish= fishInLake.find(f => f.id === hoverQueueRef.current[0]);
-          if(firstfish && firstfish.tapCount >= firstfish.requiredTaps){
-            setTargetFishId(hoverQueueRef.current[0]);
+
+      setFishInLake(prev => {
+        // Hover gather timer: wait until 2+ fish are orbiting before selecting a target.
+        // This ensures a visible group forms before a bite is possible.
+        if (!targetFishIdRef.current) {
+          const candidates = prev.filter(f => f.behavior === "hovering");
+
+          // Only tick the timer once 2+ fish are hovering together
+          if (candidates.length >= 2) {
+            hoverGatherTimeRef.current += 1;
+          } else {
+            hoverGatherTimeRef.current = 0;
+          }
+
+          // After 180 frames (~3s at 60fps), randomly pick one hovering fish as the target
+          if (hoverGatherTimeRef.current >= 180) {
+            targetFishIdRef.current = candidates[Math.floor(Math.random() * candidates.length)].id;
+            hoverGatherTimeRef.current = 0;
           }
         }
-    
-      setFishInLake(prev => 
-        prev.map(fish => {
+
+        return prev.map(fish => {
           //console.log("fish count:", prev.length);
           const bobber = bobberRef.current;
           // console.log("bobber in update:", bobber);
           // console.log("bobber location", bobber ? `(${bobber.x.toFixed(2)}, ${bobber.y.toFixed(2)})` : "null");
           // console.log("fish location", `(${fish.x.toFixed(2)}, ${fish.y.toFixed(2)})`);
           // console.log("fish dist:", bobber ? Math.sqrt((bobber.x - fish.x) ** 2 + (bobber.y - fish.y) ** 2).toFixed(2) : "N/A");
-          
+
           const attractionRadius = 150;
           const hoverRadius = 80;
-          const biteRadius = 5;
           const maxspeed = 1.3;
           const minSpeed = 0.2;
 
-          let {
-          x, y, vx, vy,
-          behavior,
-          tapCount,
-          tapCooldown,
-          } = fish;
+          let { vx, vy, behavior, tapCount } = fish;
 
           let newVx = vx;
           let newVy = vy;
           let newBehavior = behavior;
           let tempID = fish.id;
-         
+
 
           let dx = 0;
           let dy = 0;
           let dist = 0;
-            
+
 
           if (bobber) {
             dx = bobber.x - fish.x;
@@ -158,132 +192,89 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
           }
           if (!isFinite(dist) || dist < 1) dist = 1;
 
-          //caught
+          // Caught fish are frozen in place — no further movement
           if (newBehavior === "caught") {
-            return fish; // frozen
+            return fish;
           }
 
-          let win=false; //temp variable for winning the mini game, eventually replace with mobile logic
-
-
-          if(newBehavior === "bite" && bobber) {
-          let hook=1; //eventually replace with mobile logic
-
-          if(hook===1){
-            //pop up with bite screen and start mini game on phone
-            //if win change flag to caught 
-            win=true; //temp auto win for testing
-            newBehavior="caught";
+          if (newBehavior === "bite" && bobber) {
+            // Trigger the game's bite state so the player can react
+            if (stateRef.current === "waiting") {
+              setState("bite");
+            }
+            // Guard: if the game already moved past bite (caught or reset), freeze the fish
+            // without this, the animation loop could re-trigger "bite" and overwrite "caught"
+            if (stateRef.current === "caught" || stateRef.current === "none") {
+              return fish;
+            }
             return {
               ...fish,
-              behavior: newBehavior,
+              behavior: "bite" as FishBehavior,
               x: bobber.x,
               y: bobber.y,
               vx: 0,
               vy: 0,
-            };}
-            else{
+            };
+          }
 
-            //reset fish to swimming if they escape
+
+        if(newBehavior === "hovering" && bobber) {
+
+          // Spread fish evenly around the orbit using their UUID as a phase offset.
+          // Each fish gets a unique angle so they don't all stack on the same point.
+          const phaseOffset = (parseInt(fish.id.replace(/-/g, "").slice(0, 6), 16) % 1000) / 1000 * Math.PI * 2;
+          const angle = time * 0.008 + phaseOffset;
+          const newtapCount = tapCount + 1;
+
+          if (targetFishIdRef.current === tempID) {
+            if (newtapCount >= fish.requiredTaps) {
+              // 50/50 chance: fish either commits to biting or chickens out back to hovering.
+              // On failure, target resets so the gather timer has to run again.
+              if (Math.random() < 0.5) {
+                newBehavior = "hovering";
+                targetFishIdRef.current = null;
+                hoverGatherTimeRef.current = 0;
+              } else {
+                newBehavior = "bite";
+                bitingFishRef.current = { ...fish, tapCount: newtapCount, behavior: "bite" as FishBehavior };
+              }
+            } else {
+              // Target fish springs toward the bobber center
+              newVx = dx * 0.08;
+              newVy = dy * 0.08;
             }
-        }
-
-        let hook=0; //temp hook variable to simulate hook state, eventually replace with mobile logic 
-
-        
-        if(newBehavior === "hovering" && hook === 0 && bobber ) {
-
-          
-            console.log("in hovering----------------------------------------");
-          
-          const seed = Number(fish.id.slice(0, 5));
-          const angle = time * 0.01 + seed;
-      
-
-          const orbitX = Math.cos(angle) * hoverRadius; 
-          const orbitY = Math.sin(angle) * hoverRadius;
-
-          const pushX = -orbitX * 0.3; // push away from bobber to create tension
-          const pushY = -orbitY * 0.3;
-          
-
-          const pullStrength = 0.5;
-
-          const pullX = dx * pullStrength;
-          const pullY = dy * pullStrength;
-
-          let newtapCount = tapCount;
-          let newTapCooldown = Math.max(0, tapCooldown - 1);
-
-
-          if(dist < biteRadius && tapCooldown <= 0) {
-            console.log("in bite radius, tap count:", tapCount, "cooldown:", tapCooldown);
-            console.log("target fish id:", targetFishId, "temp id:", tempID);
-
-            newtapCount = tapCount + 1;
-            newTapCooldown = 500; // 30 frames cooldown
-
+          } else {
+            // Non-target fish orbit the bobber at hoverRadius
+            const targetX = bobber.x + Math.cos(angle) * hoverRadius;
+            const targetY = bobber.y + Math.sin(angle) * hoverRadius;
+            newVx = (targetX - fish.x) * 0.08;
+            newVy = (targetY - fish.y) * 0.08;
           }
 
-          if(tapCooldown > 250 && dist<(hoverRadius-20)) {// move away from bobber slightly during cooldown to give player a chance to tap again, eventually replace with mobile logic that gives player a chance to tap again
-            console.log("moving away--------------------------------");
-            newVx += (pushX / dist) * 0.5; 
-            newVy += (pushY / dist) * 0.5;
-          }
-          if(tapCooldown < 100&&dist>(hoverRadius -30)) {
-            console.log("move toward--------------------------");
-            newVx += (pullX / dist) * 0.5; // move towards bobber when cooldown is almost up to simulate fish being pulled in  
-            newVy += (pullY / dist) * 0.5;
-          }
-
-
-          if ( targetFishId && targetFishId===tempID &&newtapCount >= fish.requiredTaps)  {
-            console.log("fish is going to bite, tap count:", newtapCount);
-            //newBehavior = "bite";
-
-          }
-
-          return {
-            ...fish,
-            behavior: newBehavior,
-            x: fish.x + newVx,
-            y: fish.y + newVy,
-            vx: newVx,
-            vy: newVy,
-            tapCount: newtapCount,
-            tapCooldown: newTapCooldown,
-          };
+          const hb = applyBoundaries(fish.x + newVx, fish.y + newVy, newVx, newVy);
+          return { ...fish, behavior: newBehavior, ...hb, tapCount: newtapCount };
 
 
 
-          
          }
-    
+
 
         if (newBehavior === "attracted") {
                    // console.log("attracted logic running");
 
 
-          if(bobber && dist < hoverRadius) {
+          if (bobber && dist < hoverRadius) {
             newBehavior = "hovering";
           }
 
-          if(!targetFishId){
-            if(!hoverQueueRef.current.includes(fish.id) && hoverQueueRef.current.length <2){
-              hoverQueueRef.current.push(fish.id)
-              console.log("added fish to Q-----------------------------------");
-            }
- 
-        }
-
           const closeBoost = dist < 70 ? 2 : 1;
 
-                    
+
           const speed = Math.max(
             minSpeed,
             Math.min(dist / attractionRadius, 1) * maxspeed
           );
-          
+
 
           const targetVx = (dx / dist) * speed;
           const targetVy = (dy / dist) * speed;
@@ -310,92 +301,60 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
           const wobbleX = Math.sin(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
           const wobbleY = Math.cos(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
 
-          return {
-            ...fish,
-            behavior: newBehavior,
-            x: fish.x + newVx + wobbleX,
-            y: fish.y + newVy + wobbleY,
-            vx: newVx,
-            vy: newVy,
-          };
+          const ab = applyBoundaries(fish.x + newVx + wobbleX, fish.y + newVy + wobbleY, newVx, newVy);
+          return { ...fish, behavior: newBehavior, ...ab };
 
         }
 
         if(newBehavior === "swimming") {
 
-          //console.log("swimming logic running");
-          //console.log("fish dist:", dist);
-
-
           if (bobber && dist < attractionRadius) {
-            //console.log("entering attraction radius, behavior changing to attracted");
             const speed = Math.min(dist / attractionRadius, 1) * maxspeed;
             const targetVx = (dx / dist) * speed;
             const targetVy = (dy / dist) * speed;
-
-            const turnSpeed = 0.2;   // responsiveness
-            const accelBoost = 0.05; // extra pull
-
+            const turnSpeed = 0.2;
+            const accelBoost = 0.05;
             newVx += (targetVx - newVx) * turnSpeed;
             newVy += (targetVy - newVy) * turnSpeed;
-
-            // extra pull so it doesn’t feel too sluggish when far away
             newVx += (dx / dist) * accelBoost;
             newVy += (dy / dist) * accelBoost;
-            //console.log("changing to attracted now");
             newBehavior = "attracted";
           }
-          // 🐟 normal movement + wobble
-            const speed = Math.sqrt(newVx * newVx + newVy * newVy);
-            const maxSpeed = 1.5;
 
-            if (speed > maxSpeed) {
-              newVx = (newVx / speed) * maxSpeed;
-              newVy = (newVy / speed) * maxSpeed;
-            }
-
-            const wobbleX = Math.sin(time + fish.y * 0.05) * 0.2;
-            const wobbleY = Math.cos(time + fish.x * 0.06) * 0.2;
-
-            if (Math.random() < 0.02) { // 2% chance per frame
-              const angle = Math.random() * (Math.PI / 4);
-              const direction = Math.random() < 0.5 ? -1 : 1;
-              const theta = angle * direction;
-
-              const rotatedVx = newVx * Math.cos(theta) - newVy * Math.sin(theta);
-              const rotatedVy = newVx * Math.sin(theta) + newVy * Math.cos(theta);
-
-              newVx = rotatedVx;
-              newVy = rotatedVy;
-            }
-
-            return {
-              ...fish,
-              behavior: newBehavior,
-              x: fish.x + newVx + wobbleX,
-              y: fish.y + newVy + wobbleY,
-              vx: newVx,
-              vy: newVy,
-            };
-
+          const speed = Math.sqrt(newVx * newVx + newVy * newVy);
+          const maxSpeed = 1.5;
+          if (speed > maxSpeed) {
+            newVx = (newVx / speed) * maxSpeed;
+            newVy = (newVy / speed) * maxSpeed;
           }
+
+          const wobbleX = Math.sin(time + fish.y * 0.05) * 0.2;
+          const wobbleY = Math.cos(time + fish.x * 0.06) * 0.2;
+
+          if (Math.random() < 0.02) {
+            const angle = Math.random() * (Math.PI / 4);
+            const direction = Math.random() < 0.5 ? -1 : 1;
+            const theta = angle * direction;
+            const rotatedVx = newVx * Math.cos(theta) - newVy * Math.sin(theta);
+            const rotatedVy = newVx * Math.sin(theta) + newVy * Math.cos(theta);
+            newVx = rotatedVx;
+            newVy = rotatedVy;
+          }
+
+          const sb = applyBoundaries(fish.x + newVx + wobbleX, fish.y + newVy + wobbleY, newVx, newVy);
+          return { ...fish, behavior: newBehavior, ...sb };
+
+        }
 
 
 
             return fish;
 
 
-          })
-        .filter(fish =>
-        fish.x > -100 &&
-        fish.x < LakeWidth + 100 &&
-        fish.y > -100 &&
-        fish.y < LakeHeight + 100
-          )
-          
-    ); 
+        });
+      });
 
-    
+
 
       animationId = requestAnimationFrame(update);
     };
@@ -404,20 +363,20 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
 
     return () => cancelAnimationFrame(animationId);
   }, [bobber]);
-        
 
 
-  
+
+
   const createFish = (): Fishy => {
     const roll = Math.random();
     const side=Math.floor(Math.random() * 4);
 
     let fish;
 
-// spawn outside the lake so it has to swim in
+// Spawn outside the lake edges so each fish swims in naturally
     let x=0;
     let y=0;
-    
+
     if (side === 0) {
       // left
       x = -20;
@@ -439,15 +398,16 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
     const centerX = LakeWidth / 2;
     const centerY = LakeHeight / 2;
 
+    // Initial velocity aimed loosely toward center so fish swim into the lake
     const vx = (centerX - x) * 0.001;
     const vy = (centerY - y) * 0.001;
 
 
-
+    // Rarity roll — probabilities: common 60%, uncommon 15%, rare 12%, legendary 3%, mythical 9%, the one that got away 1%
     if (roll < 0.6) {
       const commonFish = fishTypes.filter(f => f.rarity === "common");
       fish = commonFish[Math.floor(Math.random() * commonFish.length)];
-    } else if (roll < 0.75) { 
+    } else if (roll < 0.75) {
       const uncommonFish = fishTypes.filter(f => f.rarity === "uncommon");
       fish = uncommonFish[Math.floor(Math.random() * uncommonFish.length)];
     } else if (roll < 0.87) {
@@ -462,32 +422,30 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
     } else {
       const gotAwayFish = fishTypes.filter(f => f.rarity === "the one that got away");
       fish = gotAwayFish[Math.floor(Math.random() * gotAwayFish.length)];
-    } 
+    }
 
-    // use fixed stats
+    // "The one that got away" fish use fixed stats defined in fishTypes.ts
     if (fish.rarity === "the one that got away") {
       return {
         id: crypto.randomUUID(),
         name: fish.name,
         rarity: fish.rarity,
-        length: fish.length,   
+        length: fish.length,
         weight: fish.weight ,
         points: fish.points ,
 
-      // spawn outside the lake so it has to swim in
         x,y,
-
-        // initial movement
         vx,
         vy,
         behavior: "swimming",
         tapCount: 0,
         tapCooldown: 0,
-        requiredTaps: Math.floor(Math.random() * 5) + 3, // random number of taps required to catch the fish  
-        
+        requiredTaps: Math.floor(Math.random() * 180) + 180, // hover frames before biting (3–6s at 60fps)
+
       };
     }
 
+    // Length ranges scale up with rarity
     const length=
       fish.rarity === "common" ? Math.floor(Math.random() * 40) + 20 :
       fish.rarity === "uncommon" ? Math.floor(Math.random() * 50) + 30 :
@@ -495,14 +453,15 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
       fish.rarity === "legendary" ? Math.floor(Math.random() * 80) + 50 :
       Math.floor(Math.random() * 20) + 10;
 
-    const weight = Math.round(length * (Math.random() * 0.5 + 0.02)); // weight is based on length with some randomness 
+    const weight = Math.round(length * (Math.random() * 0.5 + 0.02)); // weight is based on length with some randomness
 
+    // Points scale with rarity; mythical gives the highest range (150–349)
     const points=
       fish.rarity === "common" ? Math.floor(Math.random() * 40) + 20 :
       fish.rarity === "uncommon" ? Math.floor(Math.random() * 50) + 30 :
       fish.rarity === "rare" ? Math.floor(Math.random() * 60) + 40 :
       fish.rarity === "legendary" ? Math.floor(Math.random() * 80) + 50 :
-      Math.floor(Math.random() * 20) + 10;
+      Math.floor(Math.random() * 200) + 150;
 
   return {
     id: crypto.randomUUID(),
@@ -519,22 +478,52 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
     behavior: "swimming",
     tapCount: 0,
     tapCooldown: 0,
-    requiredTaps: Math.floor(Math.random() * 5) + 3, // random number of taps required to catch the fish
+    requiredTaps: Math.floor(Math.random() * 180) + 180, // hover frames before biting (3–6s at 60fps)
   };
 };
 
   const catchFish = (fish: Fishy) => {
-    const newFish = createFish();
-    setInventory(prev => [...prev, newFish]);
+    setInventory(prev => [...prev, fish]);
+    setLastCaughtFish(fish);
+    setFishInLake(prev => prev.map(f => f.id === fish.id ? { ...f, behavior: "caught" as FishBehavior } : f));
+    // Clear all bite-related refs so the next fishing session starts fresh
+    targetFishIdRef.current = null;
+    bitingFishRef.current = null;
+    hoverGatherTimeRef.current = 0;
     setState("caught");
+
+    const playerName = getPlayerName();
+    const body = {
+      playerName,
+      id: fish.id,
+      name: fish.name,
+      rarity: fish.rarity,
+      points: fish.points,
+      weight: typeof fish.weight === "number" ? fish.weight : null,
+      length: fish.length,
+    };
+
+    // Persist catch to player inventory on server
+    fetch(`${API}/inventory`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(err => console.error("Failed to save catch to inventory:", err));
+
+    // Submit to global leaderboard
+    fetch(`${API}/leaderboard`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, fishName: fish.name }),
+    }).catch(err => console.error("Failed to submit to leaderboard:", err));
   }
 
 
 
     return(
-     <div> 
+     <div>
 
-      {/* OVERLAY */}
+      {/* OVERLAY — dims the lake when a sidebar is open; clicking it closes both sidebars */}
       {(isAnySidebarOpen) && (
         <div
           className="overlay"
@@ -546,7 +535,7 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
       )}
 
 
-        {/* LEFT SIDEBAR */}
+        {/* LEFT SIDEBAR — player inventory */}
           <div className={`sidebar left ${showInventory ? "open" : "collapsed"}`}>
 
              {/* SINGLE TOGGLE TAB */}
@@ -566,52 +555,19 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
               )}
             </div>
 
-        {/* RIGHT SIDEBAR */}
+        {/* RIGHT SIDEBAR — global leaderboard */}
         <div className={`sidebar right ${showLeaderboard ? "open" : "collapsed"}`}>
-          {/* TABS (ALWAYS VISIBLE) */}
-          
-              <div
-                className="side-tab right-tab"
-                onClick={() => setShowLeaderboard(prev => !prev)}
-              >
-                {showLeaderboard ? "▶" : "◀"}
-              </div>
-            
+          <div
+            className="side-tab right-tab"
+            onClick={() => setShowLeaderboard(prev => !prev)}
+          >
+            {showLeaderboard ? "▶" : "◀"}
+          </div>
 
-          {/* CONTENT (ONLY WHEN OPEN) */}
           {showLeaderboard && (
             <>
-             <div className="tabs">
-                <button
-                  className={activeTab === "leaderboard" ? "active" : ""}
-                  onClick={() => setActiveTab("leaderboard")}
-                >
-                  Leaderboard
-                </button>
-
-                <button
-                  className={activeTab === "recent" ? "active" : ""}
-                  onClick={() => setActiveTab("recent")}
-                >
-                  Recent
-                </button>
-              </div>
-
-            
-
-              {activeTab === "leaderboard" && (
-                <div>
-                  <p>Player1 - 10 fish</p>
-                  <p>Player2 - 8 fish</p>
-                </div>
-              )}
-
-              {activeTab === "recent" && (
-                <div>
-                  <p>🐟 Salmon caught</p>
-                  <p>🐠 Tuna caught</p>
-                </div>
-              )}
+              <h2>Leaderboard</h2>
+              <Leaderboard />
             </>
           )}
         </div>
@@ -619,80 +575,82 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
 
         {/* MAIN CONTENT */}
         <div style={{textAlign: "center", marginTop: "50px"}}>
-          <h1>Fishing Game thats very cool and girly but in a way that everyone loves</h1>
+          <h1>Phising</h1>
           <div className="game-screen">
             <div className="lake">
               {bobber && (
-                <div style={{
-                  position: "absolute",
-                  left: bobber.x - 10,
-                  top: bobber.y - 10,
-                  width: 20,
-                  height: 20,
-                  background: "red",
-                  borderRadius: "50%",
-                  border: "3px solid white",
-                  zIndex: 10,
-                }} />
+                <div
+                  className={state === "bite" ? "bobber bobber-bite" : "bobber"}
+                  style={{ left: bobber.x - 10, top: bobber.y - 10 }}
+                />
               )}
               {fishInLake.map(fish => (
                 <div
                   key={fish.id}
-                  style={{
-                    position: "absolute",
-                    left: fish.x,
-                    top: fish.y,
-                    width: 20,
-                    height: 20,
-                    background: "orange",
-                    borderRadius: "50%",
-                  }}
+                  // hovering fish get the bob animation to visually distinguish them
+                  className={fish.behavior === "hovering" ? "fish-dot fish-dot-hover" : "fish-dot"}
+                  style={{ left: fish.x, top: fish.y }}
                 />
               ))}
             </div>
           </div>
 
 
-          {/* Start screen */}
-
+          {/* Fish button — casts the bobber and spawns 21–30 fish */}
           {state === "none" && (
-            
             <button onClick={() => {
+              // Reset all refs before starting a new session
+              targetFishIdRef.current = null;
+              bitingFishRef.current = null;
+              hoverGatherTimeRef.current = 0;
               setState("waiting");
-              const count = Math.floor(Math.random() * 5) + 6; // random 2-6
-              const newFishArray: Fishy[] = []; // create an array to hold new fish
-                for (let i = 0; i < count; i++) {
-                  const newFishList = createFish();
-                  newFishArray.push(newFishList); // add each new fish to the array
-                }
-                setFishInLake(newFishArray);
-                //pick fish to bite
-                const randindex= Math.floor(Math.random() * newFishArray.length);
-              
-
-
-                setBobber({
-                  x: Math.random() * (LakeWidth - 100) + 50,
-                  y: Math.random() * (LakeHeight - 100) + 50,
-                });
-            }}>Play</button>
-            
+              const count = Math.floor(Math.random() * 10) + 21;
+              const newFishArray: Fishy[] = [];
+              for (let i = 0; i < count; i++) {
+                newFishArray.push(createFish());
+              }
+              setFishInLake(newFishArray);
+              // Bobber spawns with a margin so fish don't immediately hover on it
+              const spawnMargin = 200;
+              setBobber({
+                x: Math.random() * (LakeWidth - spawnMargin * 2) + spawnMargin,
+                y: Math.random() * (LakeHeight - spawnMargin * 2) + spawnMargin,
+              });
+            }}>Fish</button>
           )}
-          {/* Waiting */}
+
+          {/* Reel button — cancels the current cast and resets everything */}
           {state === "waiting" && (
-            <WaitingForABite onFishBite={() => setState("bite")} />
+            <button onClick={() => {
+              setBobber(null);
+              setFishInLake([]);
+              targetFishIdRef.current = null;
+              bitingFishRef.current = null;
+              hoverGatherTimeRef.current = 0;
+              setState("none");
+            }}>Reel</button>
           )}
 
-          {/* Bite */}
+          {/* Bite alert — shown when a fish commits to biting; player must click to catch */}
           {state === "bite" && (
-            <BiteAlert onCatch={() => setState("caught")} />
+            <BiteAlert onCatch={() => {
+              if (bitingFishRef.current) {
+                catchFish(bitingFishRef.current);
+                bitingFishRef.current = null;
+              }
+            }} />
           )}
 
-          {/* Caught */}
+          {/* Caught screen — shows the caught fish's stats; Done resets to idle */}
           {state === "caught" && (
-            <>
-              <CaughtFish onReset={() => setState("none")} />
-            </>
+            <CaughtFish fish={lastCaughtFish} onReset={() => {
+              setFishInLake([]);
+              setBobber(null);
+              targetFishIdRef.current = null;
+              bitingFishRef.current = null;
+              hoverGatherTimeRef.current = 0;
+              setState("none");
+            }} />
           )}
 
 
