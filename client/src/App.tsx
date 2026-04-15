@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -7,6 +7,7 @@ import VerifyEmail from './VerifyEmail'
 import ResetPassword from './ResetPassword'
 import ForgotPassword from './ForgotPassword'
 import QRCodePopup from './QRCode'
+import useGameSocket from './useGameSocket'
 import { apiUrl } from './api'
 import './App.css'
 
@@ -15,6 +16,17 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<{ id: string; email: string; username: string } | null>(null)
   const [showQR, setShowQR] = useState(false)
+  const token = isAuthenticated ? localStorage.getItem('accessToken') : null
+
+  const handleGameMessage = useCallback((data: unknown) => {
+    const msg = data as { type?: string; [key: string]: unknown }
+    if (msg.type === 'count') {
+      setCount(msg.value as number)
+    }
+    // Handle other game state messages here
+  }, [])
+
+  const { send, connected } = useGameSocket(token, handleGameMessage)
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -101,10 +113,15 @@ function App() {
         </div>
         <button
           className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          onClick={() => {
+            const next = count + 1
+            setCount(next)
+            send({ type: 'count', value: next })
+          }}
         >
           Count is {count}
         </button>
+        {connected && <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>WebSocket connected</p>}
       </section>
 
       <div className="ticks"></div>
