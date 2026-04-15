@@ -4,17 +4,18 @@ export type FishTemplate =
   | {
       name: string;
       rarity: "common" | "uncommon" | "rare" | "legendary" | "mythical";
+      journalEntry:string;
     }
   | {
       name: string;
       rarity: "the one that got away";
       length: number;
       weight: "how rude to ask";
+      journalEntry:string;
     };
 
 export type FishBehavior = "swimming" | "attracted" | "hovering" | "bite" | "caught";
 
-export type journalentry ="";
 
 export type Fishy = {
   id: string;
@@ -37,7 +38,7 @@ export type Fishy = {
   hX:number;
   hY:number;
 
-  journalEntry:
+  journalEntry:string;
 
 };
 

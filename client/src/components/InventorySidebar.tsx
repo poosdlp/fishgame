@@ -24,7 +24,7 @@ export function InventorySidebar({ isOpen, onToggle, inventory }: Props) {
             <Inventory />
         </>
         )}
-    </div>}
+    </div>
     );
 
 }
