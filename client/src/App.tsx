@@ -58,8 +58,6 @@ function App() {
                 newFishArray.push(createFish()); // add each new fish to the array
               }
               setFishInLake(newFishArray);
-              //pick fish to bite
-              const randindex= Math.floor(Math.random() * newFishArray.length);
               
               setBobber({
                 x: Math.random() * (LakeWidth - 100) + 50,
@@ -103,27 +101,7 @@ function App() {
         {/* Start screen */}
 
         {state === "none" && (
-          <div>Start the game!</div>
-          
-          // <button onClick={() => {
-          //   setState("waiting");
-          //   const count = Math.floor(Math.random() * 5) + 6; // random 2-6
-          //   const newFishArray: Fishy[] = []; // create an array to hold new fish
-          //     for (let i = 0; i < count; i++) {
-          //       const newFishList = createFish();
-          //       newFishArray.push(newFishList); // add each new fish to the array
-          //     }
-          //     setFishInLake(newFishArray);
-          //     //pick fish to bite
-          //     const randindex= Math.floor(Math.random() * newFishArray.length);
-            
-
-
-          //     setBobber({
-          //       x: Math.random() * (LakeWidth - 100) + 50,
-          //       y: Math.random() * (LakeHeight - 100) + 50,
-          //     });
-          // }}>Play</button>
+          <div>Start the game!</div>         
           
         )}
         {/* Waiting */}

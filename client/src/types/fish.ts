@@ -13,6 +13,9 @@ export type FishTemplate =
     };
 
 export type FishBehavior = "swimming" | "attracted" | "hovering" | "bite" | "caught";
+
+export type journalentry ="";
+
 export type Fishy = {
   id: string;
   name: string;
@@ -34,9 +37,14 @@ export type Fishy = {
   hX:number;
   hY:number;
 
+  journalEntry:
+
 };
 
 
 export type LeaderboardTab = "leaderboard" | "recent";
 export type inventorytab = "fish" | "journals";
+
+
+
 

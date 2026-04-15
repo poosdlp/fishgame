@@ -27,6 +27,11 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
             setTargetFishId(hoverQueueRef.current[0]);
           }
         }
+        if(targetFishId){
+            console.log("target fish id:",targetFishId)
+
+        }
+        console.log()
     
       setFishInLake(prev => 
         prev.map(fish => {
