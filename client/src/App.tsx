@@ -1,10 +1,11 @@
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
 import { Inventory } from './components/inventory';
+import { catchFish as catchFishApi, getInventory } from './api';
 
-import type {GameState,Fishy,LeaderboardTab} from './types/fish'
+import type {GameState,Fishy,InventoryFish,LeaderboardTab} from './types/fish'
 import {LakeHeight,LakeWidth} from './data/lakeDim'
 import { createFish } from "./utils/fishCreate";
 import { useFishSimulation } from "./hooks/useFishSim";
@@ -22,9 +23,25 @@ function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("leaderboard");
   const isAnySidebarOpen = showInventory || showLeaderboard;
-  const [inventory, setInventory] = useState<Fishy[]>([]);
+  const [inventory, setInventory] = useState<InventoryFish[]>([]);
+  const [lastCatch, setLastCatch] = useState<InventoryFish | null>(null);
   
   const { fishInLake, setFishInLake, targetFishId } = useFishSimulation(bobber);
+
+  useEffect(() => {
+    getInventory().then(setInventory).catch(() => {});
+  }, []);
+
+  const handleCatch = async () => {
+    try {
+      const fish = await catchFishApi();
+      setLastCatch(fish);
+      setInventory(prev => [fish, ...prev]);
+    } catch {
+      // still transition to caught state even if save fails
+    }
+    setState("caught");
+  };
    
    
 
@@ -111,13 +128,13 @@ function App() {
 
         {/* Bite */}
         {state === "bite" && (
-          <BiteAlert onCatch={() => setState("caught")} />
+          <BiteAlert onCatch={handleCatch} />
         )}
 
         {/* Caught */}
         {state === "caught" && (
           <>
-            <CaughtFish onReset={() => setState("none")} />
+            <CaughtFish fish={lastCatch} onReset={() => { setLastCatch(null); setState("none"); }} />
           </>
         )}
 

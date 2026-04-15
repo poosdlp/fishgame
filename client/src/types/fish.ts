@@ -43,6 +43,31 @@ export type Fishy = {
 };
 
 
+export type InventoryFish = {
+  _id: string;
+  name: string;
+  rarity: FishTemplate["rarity"];
+  weight: number | "how rude to ask";
+  length: number;
+  journalEntry: string;
+  caughtAt: string;
+};
+
+export type LeaderboardEntry = {
+  username: string;
+  totalFish: number;
+};
+
+export type RecentCatch = {
+  _id: string;
+  name: string;
+  rarity: FishTemplate["rarity"];
+  length: number;
+  weight: number | "how rude to ask";
+  caughtAt: string;
+  username: string;
+};
+
 export type LeaderboardTab = "leaderboard" | "recent";
 export type inventorytab = "fish" | "journals";
 

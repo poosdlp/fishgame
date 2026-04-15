@@ -1,11 +1,11 @@
 
-import type { Fishy } from '../types/fish';
+import type { InventoryFish } from '../types/fish';
 import { Inventory } from './inventory';
 
 type Props = {
   isOpen: boolean;
   onToggle: () => void;
-  inventory: Fishy[];
+  inventory: InventoryFish[];
 }
 
 export function InventorySidebar({ isOpen, onToggle, inventory }: Props) {
@@ -21,7 +21,7 @@ export function InventorySidebar({ isOpen, onToggle, inventory }: Props) {
         {isOpen && (
         <>
             <h2>Inventory</h2>
-            <Inventory />
+            <Inventory fish={inventory} />
         </>
         )}
     </div>

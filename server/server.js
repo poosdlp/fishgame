@@ -24,6 +24,9 @@ app.use('/profile', profileRoutes);
 const sessionRoutes = require('./routes/session');
 app.use('/session', sessionRoutes);
 
+const fishRoutes = require('./routes/fish');
+app.use('/fish', fishRoutes);
+
 const { setupWebSocket } = require('./ws');
 
 const PORT = process.env.PORT || 3000;
