@@ -7,6 +7,12 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
   const [targetFishId, setTargetFishId] = useState<string | null>(null);
   const bobberRef = useRef<{ x: number; y: number } | null>(null);
   const hoverQueueRef = useRef<string[]>([]);
+  const [biteDetected, setBiteDetected] = useState(false);
+  const [winDetected, setWinDetected] = useState(false);
+  const [lossDetected, setLossDetected]= useState(false);
+
+  let hook = 0;
+  let win=0;
 
   useEffect(() => {
     bobberRef.current = bobber;
@@ -31,7 +37,7 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
             console.log("target fish id:",targetFishId)
 
         }
-        console.log()
+        
     
       setFishInLake(prev => 
         prev.map(fish => {
@@ -81,20 +87,23 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
 
           //caught
           if (newBehavior === "caught") {
+            setWinDetected(true);
             return fish; // frozen
           }
 
-          let win=false; //temp variable for winning the mini game, eventually replace with mobile logic
+          let win=0; //temp variable for winning the mini game, eventually replace with mobile logic
 
 
           if(newBehavior === "bite" && bobber) {
           let hook=1; //eventually replace with mobile logic
+          let win=1;
 
-          if(hook===1){
+          if(hook===1 && win===1){
             //pop up with bite screen and start mini game on phone
             //if win change flag to caught 
-            win=true; //temp auto win for testing
+            
             newBehavior="caught";
+            setBiteDetected(true);
             return {
               ...fish,
               behavior: newBehavior,
@@ -104,8 +113,7 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
               vy: 0,
             };}
             else{
-
-            //reset fish to swimming if they escape
+                setLossDetected(true);
             }
         }
 
@@ -535,5 +543,5 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
     return () => cancelAnimationFrame(animationId);
   }, [bobber]);
 
-  return { fishInLake, setFishInLake, targetFishId };
+  return { fishInLake, setFishInLake, targetFishId ,biteDetected, setBiteDetected,winDetected,setWinDetected,lossDetected,setLossDetected};
 }

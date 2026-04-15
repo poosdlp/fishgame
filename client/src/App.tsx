@@ -1,4 +1,4 @@
-import {useState} from "react";
+import { useEffect, useRef, useState } from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
@@ -24,8 +24,29 @@ function App() {
   const isAnySidebarOpen = showInventory || showLeaderboard;
   const [inventory, setInventory] = useState<Fishy[]>([]);
   
-  const { fishInLake, setFishInLake, targetFishId } = useFishSimulation(bobber);
+  const { fishInLake, setFishInLake, targetFishId, biteDetected, setBiteDetected,winDetected,setWinDetected,lossDetected,setLossDetected } = useFishSimulation(bobber);
    
+  
+  useEffect(() => {
+  if (biteDetected) {
+    setState("bite");
+    setBiteDetected(false); // reset so it can fire again next catch
+  }
+}, [biteDetected]);
+
+useEffect(() => {
+  if (winDetected) {
+    setState("caught");
+    setWinDetected(false); // reset so it can fire again next catch
+  }
+}, [winDetected]);
+
+useEffect(() => {
+  if (lossDetected) {
+    setState("none");
+    setLossDetected(false); // reset so it can fire again next catch
+  }
+}, [lossDetected]);
    
 
 
@@ -101,22 +122,29 @@ function App() {
         {/* Start screen */}
 
         {state === "none" && (
-          <div>Start the game!</div>         
+          <div>Start the game!</div> 
+
           
         )}
         {/* Waiting */}
+        {/* game state: fish go to bobber until a bite */}
         {state === "waiting" && (
           <WaitingForABite onFishBite={() => setState("bite")} />
         )}
 
         {/* Bite */}
         {state === "bite" && (
+
+          
+        
+        
           <BiteAlert onCatch={() => setState("caught")} />
         )}
 
         {/* Caught */}
         {state === "caught" && (
           <>
+
             <CaughtFish onReset={() => setState("none")} />
           </>
         )}
