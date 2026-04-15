@@ -19,11 +19,6 @@ export type FishBehavior = "swimming" | "attracted" | "hovering" | "bite" | "cau
 
 export type Fishy = {
   id: string;
-  name: string;
-  rarity: FishTemplate["rarity"];
-  weight: number | "how rude to ask";
-  length: number;
-
   x: number;
   y: number;
   vx: number;
@@ -37,8 +32,6 @@ export type Fishy = {
 
   hX:number;
   hY:number;
-
-  journalEntry:string;
 
 };
 

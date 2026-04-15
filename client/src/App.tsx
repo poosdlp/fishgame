@@ -2,10 +2,9 @@ import {useState, useEffect} from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
-import { Inventory } from './components/inventory';
 import { catchFish as catchFishApi, getInventory } from './api';
 
-import type {GameState,Fishy,InventoryFish,LeaderboardTab} from './types/fish'
+import type {GameState,Fishy,InventoryFish} from './types/fish'
 import {LakeHeight,LakeWidth} from './data/lakeDim'
 import { createFish } from "./utils/fishCreate";
 import { useFishSimulation } from "./hooks/useFishSim";
@@ -21,12 +20,11 @@ function App() {
   const [bobber, setBobber] = useState<{x: number, y: number} | null>(null);
   const [showInventory, setShowInventory] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [activeTab, setActiveTab] = useState<LeaderboardTab>("leaderboard");
   const isAnySidebarOpen = showInventory || showLeaderboard;
   const [inventory, setInventory] = useState<InventoryFish[]>([]);
   const [lastCatch, setLastCatch] = useState<InventoryFish | null>(null);
   
-  const { fishInLake, setFishInLake, targetFishId } = useFishSimulation(bobber);
+  const { fishInLake, setFishInLake } = useFishSimulation(bobber);
 
   useEffect(() => {
     getInventory().then(setInventory).catch(() => {});
@@ -68,18 +66,19 @@ function App() {
       <div style={{textAlign: "center", marginTop: "50px"}}>
         <h1>Fishing Game thats very cool and girly but in a way that everyone loves</h1>
         <button onClick={() => {
+            const count = Math.floor(Math.random() * 5) + 6; // random 6-10
+            const newFishArray: Fishy[] = [];
+
+            for (let i = 0; i < count; i++) {
+              newFishArray.push(createFish());
+            }
+
+            setFishInLake(newFishArray);
             setState("waiting");
-            const count = Math.floor(Math.random() * 5) + 6; // random 2-6
-            const newFishArray: Fishy[] = []; // create an array to hold new fish
-              for (let i = 0; i < count; i++) {
-                newFishArray.push(createFish()); // add each new fish to the array
-              }
-              setFishInLake(newFishArray);
-              
-              setBobber({
-                x: Math.random() * (LakeWidth - 100) + 50,
-                y: Math.random() * (LakeHeight - 100) + 50,
-              });
+            setBobber({
+              x: Math.random() * (LakeWidth - 100) + 50,
+              y: Math.random() * (LakeHeight - 100) + 50,
+            });
           }}>Play</button>
         
         <div className="game-screen">

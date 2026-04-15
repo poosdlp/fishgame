@@ -47,13 +47,11 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
           const biteRadius = 10;
           const maxspeed = 1.3;
           const minSpeed = 0.2;
-          const disthover = 70;
 
           let {
           x, y, vx, vy,
           behavior,
           tapCount,
-          tapCooldown,
           requiredTaps,
           tapflag
           } = fish;
@@ -61,7 +59,6 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
           let newVx = vx;
           let newVy = vy;
           let newBehavior = behavior;
-          let tempID = fish.id;
           let newtapcount=tapCount;
           let newtapreq= requiredTaps;
           let Ntapflag= tapflag;
@@ -84,16 +81,12 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
             return fish; // frozen
           }
 
-          let win=false; //temp variable for winning the mini game, eventually replace with mobile logic
-
-
           if(newBehavior === "bite" && bobber) {
           let hook=1; //eventually replace with mobile logic
 
           if(hook===1){
             //pop up with bite screen and start mini game on phone
             //if win change flag to caught 
-            win=true; //temp auto win for testing
             newBehavior="caught";
             return {
               ...fish,

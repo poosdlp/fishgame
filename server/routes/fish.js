@@ -1,7 +1,7 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const CaughtFish = require('../models/caughtFish');
-const { getRandomFish, isValidFishName, VALID_RARITIES } = require('../data/fish');
+const { getRandomFish } = require('../data/fish');
 
 const router = express.Router();
 
