@@ -1,216 +1,130 @@
-import { useState, useEffect, useCallback } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import Auth from './Auth'
-import VerifyEmail from './VerifyEmail'
-import ResetPassword from './ResetPassword'
-import ForgotPassword from './ForgotPassword'
-import QRCodePopup from './QRCode'
-import useGameSocket from './useGameSocket'
-import { apiUrl } from './api'
+import {useState} from "react";
+import { BiteAlert } from './components/bitealert';
+import { CaughtFish } from './components/caughtfish';
+import { WaitingForABite } from './components/waitingforabite';
+import {Inventory } from './components/inventory';
+
+import type {GameState,Fishy,LeaderboardTab} from './types/fish'
+import {LakeHeight,LakeWidth} from './data/lakeDim'
+import { createFish } from "./utils/fishCreate";
+import { useFishSimulation } from "./hooks/useFishSim";
+import { InventorySidebar } from "./components/InventorySidebar";
+import { LeaderboardSidebar } from "./components/LeaderboardSidebar";
+
+
 import './App.css'
 
+
 function App() {
-  const [count, setCount] = useState(0)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [user, setUser] = useState<{ id: string; email: string; username: string } | null>(null)
-  const [showQR, setShowQR] = useState(false)
-  const token = isAuthenticated ? localStorage.getItem('accessToken') : null
+  const [state, setState] = useState<GameState>("none");
+  const [bobber, setBobber] = useState<{x: number, y: number} | null>(null);
+  const [showInventory, setShowInventory] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [activeTab, setActiveTab] = useState<LeaderboardTab>("leaderboard");
+  const isAnySidebarOpen = showInventory || showLeaderboard;
+  const [inventory, setInventory] = useState<Fishy[]>([]);
+  
+  const { fishInLake, setFishInLake, targetFishId } = useFishSimulation(bobber);
+   
+   
 
-  const handleGameMessage = useCallback((data: unknown) => {
-    const msg = data as { type?: string; [key: string]: unknown }
-    if (msg.type === 'count') {
-      setCount(msg.value as number)
-    }
-    // Handle other game state messages here
-  }, [])
 
-  const { send, connected } = useGameSocket(token, handleGameMessage)
-
-  useEffect(() => {
-    // Check if user is already authenticated
-    checkAuthStatus()
-  }, [])
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = localStorage.getItem('accessToken')
-      if (!token) return
-      const response = await fetch(apiUrl('/api/profile/me'), {
-        headers: { 'Authorization': `Bearer ${token}` },
-        credentials: 'include'
-      })
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-        setIsAuthenticated(true)
-      }
-    } catch (error) {
-      // Not authenticated
-    }
-  }
-
-  const handleLogin = (token: string) => {
-    localStorage.setItem('accessToken', token)
-    setIsAuthenticated(true)
-    checkAuthStatus() // Get user info
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch(apiUrl('/api/auth/logout'), {
-        method: 'POST',
-        credentials: 'include'
-      })
-    } catch (error) {
-      // Ignore logout errors
-    }
-    localStorage.removeItem('accessToken')
-    setIsAuthenticated(false)
-    setUser(null)
-  }
-
-  if (window.location.pathname === '/verify-email') {
-    return <VerifyEmail />
-  }
-
-  if (window.location.pathname === '/reset-password') {
-    return <ResetPassword />
-  }
-
-  if (window.location.pathname === '/forgot-password') {
-    return <ForgotPassword />
-  }
-
-  if (!isAuthenticated) {
-    return <Auth onLogin={handleLogin} />
-  }
-
-  return (
-    <>
-      <div className="header">
-        <span>Welcome, {user?.username || user?.email}!</span>
-        <button onClick={() => setShowQR(true)}>QR Code</button>
-        <button onClick={handleLogout}>Logout</button>
-      </div>
-
-      {showQR && user?.username && (
-        <QRCodePopup value={user.username} onClose={() => setShowQR(false)} />
-      )}
-
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+  return(
+    <div> 
+      <InventorySidebar
+        isOpen={showInventory} 
+        onToggle={()=> setShowInventory(prev=>!prev)}
+        inventory={inventory} />
+      <LeaderboardSidebar
+        isOpen={showLeaderboard}
+        onToggle={() => setShowLeaderboard(prev => !prev)}
+      />
+    {/* OVERLAY */}
+    {(isAnySidebarOpen) && (
+      <div className="overlay" onClick={() => {
+          setShowInventory(false);
+          setShowLeaderboard(false);
+        }} />
+    )}
+       
+      {/* MAIN CONTENT */}
+      <div style={{textAlign: "center", marginTop: "50px"}}>
+        <h1>Fishing Game thats very cool and girly but in a way that everyone loves</h1>
+        <button onClick={() => {
+            setState("waiting");
+            const count = Math.floor(Math.random() * 5) + 6; // random 2-6
+            const newFishArray: Fishy[] = []; // create an array to hold new fish
+              for (let i = 0; i < count; i++) {
+                newFishArray.push(createFish()); // add each new fish to the array
+              }
+              setFishInLake(newFishArray);
+              
+              setBobber({
+                x: Math.random() * (LakeWidth - 100) + 50,
+                y: Math.random() * (LakeHeight - 100) + 50,
+              });
+          }}>Play</button>
+        
+        <div className="game-screen">
+          <div className="lake">
+            {bobber && (
+              <div style={{
+                position: "absolute",
+                left: bobber.x - 10,
+                top: bobber.y - 10,
+                width: 20,
+                height: 20,
+                background: "red",
+                borderRadius: "50%",
+                border: "3px solid white",
+                zIndex: 10,
+              }} />
+            )}
+            {fishInLake.map(fish => (
+              <div
+                key={fish.id}
+                style={{
+                  position: "absolute",
+                  left: fish.x,
+                  top: fish.y,
+                  width: 20,
+                  height: 20,
+                  background: "orange",
+                  borderRadius: "50%",
+                }}
+              />
+            ))}
+          </div>
         </div>
-        <div>
-          <h1>Fish Game</h1>
-          <p>
-            Welcome to the fish game! You're authenticated.
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => {
-            const next = count + 1
-            setCount(next)
-            send({ type: 'count', value: next })
-          }}
-        >
-          Count is {count}
-        </button>
-        {connected && <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>WebSocket connected</p>}
-      </section>
 
-      <div className="ticks"></div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {/* Start screen */}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        {state === "none" && (
+          <div>Start the game!</div>         
+          
+        )}
+        {/* Waiting */}
+        {state === "waiting" && (
+          <WaitingForABite onFishBite={() => setState("bite")} />
+        )}
+
+        {/* Bite */}
+        {state === "bite" && (
+          <BiteAlert onCatch={() => setState("caught")} />
+        )}
+
+        {/* Caught */}
+        {state === "caught" && (
+          <>
+            <CaughtFish onReset={() => setState("none")} />
+          </>
+        )}
+
+
+    </div>
+  </div>
+  );
 }
 
 export default App
