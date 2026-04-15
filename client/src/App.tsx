@@ -2,7 +2,7 @@ import {useState} from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { WaitingForABite } from './components/waitingforabite';
-import {Inventory } from './components/inventory';
+import { Inventory } from './components/inventory';
 
 import type {GameState,Fishy,LeaderboardTab} from './types/fish'
 import {LakeHeight,LakeWidth} from './data/lakeDim'
