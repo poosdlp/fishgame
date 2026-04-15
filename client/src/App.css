@@ -1,3 +1,32 @@
+body {
+  background-image: url('/sand.png');
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  background-color: rgba(194, 154, 90, 0.5);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
+}
+@font-face {
+  font-family: 'PressStart2P';
+  src: url('/fonts/PressStart2P-Regular.ttf');
+}
+
+*, h1, h2, h3, h4, h5, h6, button, input {
+  font-family: 'PressStart2P', monospace;
+}
+
+button {
+  background-image: url('/wood.png');
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  background-color: rgba(80, 40, 10, 0.85);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
+  color: white;
+  text-shadow: 0 0 4px rgba(0,0,0,1), 0 1px 6px rgba(0,0,0,1);
+  border: 2px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+}
 
 /* Optional overlay */
 .overlay {
@@ -29,18 +58,33 @@
   width: 1200px;
   height: 700px;
   flex-shrink: 0;
-  background: linear-gradient(to bottom, #4fc3f7, #01579b);
+  background-image: url('/water.png');
+  background-size: 16px 16px;
+  background-color: rgba(1, 87, 155, 0.4);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.5);
+  background-attachment: local;
   overflow: hidden;
   border: 3px solid #0f4c8a;
 }
+.lake::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .fish{
   position: absolute;
   width: 50px;
   height: 30px;
   background: url("/tempfish.png") no-repeat center center;
   background-size: contain;
+  image-rendering: pixelated;
   transition: left 0.2s, top 0.2s;
-  
 }
 
 .waiting {
@@ -69,22 +113,25 @@
   flex: 1;
   padding: 8px;
   border: none;
-  background: #88a5cd;
-  color: white;
   cursor: pointer;
   border-radius: 6px;
 }
 
 .tabs button.active {
-  background: #38bdf8;
   font-weight: bold;
+  border: 2px solid rgba(255,255,255,0.5);
 }
 
 .sidebar {
   position: fixed;
   top: 0;
   height: 100%;
-  background: #7d4071;
+  background-image: url('/wood.png');
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  background-color: rgba(120, 60, 20, 0.6);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
   color: white;
   transition: width 0.3s ease;
   overflow: visible;
@@ -148,28 +195,31 @@
 }
 
 .tabs button {
-  background: #2459a3;
   border: none;
-  color: white;
   padding: 8px;
   cursor: pointer;
   border-radius: 6px;
 }
 
 .tabs button.active {
-  background: #38bdf8;
+  border: 2px solid rgba(255,255,255,0.5);
 }
 
 .side-tab {
   position: absolute;
 
-  bottom: 20px;        
-  top: auto;           
-  transform: none;    
+  bottom: 20px;
+  top: auto;
+  transform: none;
 
   width: 30px;
   height: 80px;
-  background: #7397c8;
+  background-image: url('/wood.png');
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  background-color: rgba(80, 40, 10, 0.85);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
   color: white;
   display: flex;
   align-items: center;
@@ -193,8 +243,24 @@
 .inventory-empty {
   padding: 20px;
   text-align: center;
-  color: #ddb8d8;
+  color: white;
   font-size: 0.9rem;
+}
+
+.inventory-search {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  background: rgba(0,0,0,0.3);
+  color: white;
+  font-size: 0.6rem;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+.inventory-search::placeholder {
+  color: rgba(255,255,255,0.5);
 }
 
 .inventory-list {
@@ -210,7 +276,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.1);
+  background-image: url('/wood.png');
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  background-color: rgba(180, 120, 60, 0.35);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
   border-radius: 10px;
   padding: 8px 10px;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -254,9 +325,9 @@
   font-weight: bold;
   font-size: 0.9rem;
   color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  text-shadow: 0 0 4px rgba(0,0,0,1), 0 1px 6px rgba(0,0,0,1);
 }
 
 .fish-card-rarity {
@@ -264,14 +335,16 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
+  text-shadow: 0 0 4px rgba(0,0,0,1), 0 1px 6px rgba(0,0,0,1);
 }
 
 .fish-card-stats {
   display: flex;
   gap: 8px;
   font-size: 0.75rem;
-  color: #e2c4df;
+  color: white;
   margin-top: 2px;
+  text-shadow: 0 0 4px rgba(0,0,0,1), 0 1px 6px rgba(0,0,0,1);
 }
 
 .leaderboard {
@@ -291,15 +364,13 @@
   padding: 6px 4px;
   border: none;
   border-radius: 6px;
-  background: #88a5cd;
-  color: white;
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .lb-tab.active {
-  background: #38bdf8;
+  border: 2px solid rgba(255,255,255,0.5);
 }
 
 .lb-section {
@@ -312,14 +383,19 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #ddb8d8;
+  color: white;
 }
 
 .lb-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.1);
+  background-image: url('/wood.png');
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  background-color: rgba(180, 120, 60, 0.35);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
   border-radius: 8px;
   padding: 6px 10px;
 }
@@ -342,16 +418,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 0 4px rgba(0,0,0,1), 0 1px 6px rgba(0,0,0,1);
 }
 
 .lb-row-value {
   font-size: 0.72rem;
-  color: #e2c4df;
+  color: white;
+  text-shadow: 0 0 4px rgba(0,0,0,1), 0 1px 6px rgba(0,0,0,1);
 }
 
 .lb-empty {
   font-size: 0.8rem;
-  color: #ddb8d8;
+  color: white;
   text-align: center;
   padding: 12px 0;
 }
@@ -395,8 +473,116 @@
 
 .fish-card-best {
   font-size: 0.65rem;
-  color: #f59e0b;
+  color: white;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 2px;
+}
+
+/* TUTORIAL OPEN BUTTON */
+.tutorial-open-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1200;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+/* TUTORIAL OVERLAY — covers the entire page */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background-image: url('/wood.png');
+  background-size: 16px 16px;
+  background-repeat: repeat;
+  background-color: rgba(180, 120, 60, 0.35);
+  background-blend-mode: multiply;
+  image-rendering: pixelated;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px 24px 28px;
+}
+
+.tutorial-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tutorial-page-count {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.tutorial-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.tutorial-close:hover {
+  color: white;
+}
+
+.tutorial-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  justify-content: center;
+}
+
+.tutorial-sprite {
+  width: 280px;
+  height: 200px;
+  object-fit: contain;
+}
+
+.tutorial-title {
+  font-size: 1.6rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.tutorial-text {
+  font-size: 1rem;
+  color: #cbd5e1;
+  max-width: 560px;
+  text-align: center;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.tutorial-nav {
+  display: flex;
+  gap: 16px;
+}
+
+.tutorial-btn {
+  padding: 10px 28px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.tutorial-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.tutorial-btn-done {
+  font-weight: bold;
+  border: 2px solid rgba(255,255,255,0.5);
 }

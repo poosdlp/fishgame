@@ -4,6 +4,8 @@ import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
 import { Inventory } from './components/inventory';
 import { Leaderboard } from './components/leaderboard';
+import { Tutorial } from './components/tutorial';
+import { SwingSign } from './components/SwingSign';
 import { fishTypes } from './data/fishTypes';
 import type { FishTemplate } from './data/fishTypes';
 
@@ -86,9 +88,22 @@ function getPlayerName(): string {
 function App() {
   const [state, setState] = useState<GameState>("none");
   const [bobber, setBobber] = useState<{x: number, y: number} | null>(null);
+  const [lakeScale, setLakeScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const scaleX = window.innerWidth / LakeWidth;
+      const scaleY = window.innerHeight / LakeHeight;
+      setLakeScale(Math.min(scaleX, scaleY, 1));
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
 
   const [showInventory, setShowInventory] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const isAnySidebarOpen = showInventory || showLeaderboard;
   const [inventory, setInventory] = useState<Fishy[]>([]);
   const [fishInLake, setFishInLake] = useState<Fishy[]>([]);
@@ -573,11 +588,16 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
         </div>
 
 
+        {/* TUTORIAL — full page overlay, accessible at any time */}
+        {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
+
         {/* MAIN CONTENT */}
         <div style={{textAlign: "center", marginTop: "50px"}}>
-          <h1>Phising</h1>
+          <SwingSign />
+          <button className="tutorial-open-btn" onClick={() => setShowTutorial(true)}>?</button>
           <div className="game-screen">
-            <div className="lake">
+            <div style={{ width: LakeWidth * lakeScale, height: LakeHeight * lakeScale, flexShrink: 0 }}>
+            <div className="lake" style={{ transformOrigin: 'top left', transform: `scale(${lakeScale})` }}>
               {bobber && (
                 <div
                   className={state === "bite" ? "bobber bobber-bite" : "bobber"}
@@ -592,6 +612,7 @@ const bobberRef = useRef<{ x: number; y: number } | null>(null);
                   style={{ left: fish.x, top: fish.y }}
                 />
               ))}
+            </div>
             </div>
           </div>
 

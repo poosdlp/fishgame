@@ -1,4 +1,4 @@
-import tempfish from "../assets/tempfish.png";
+import { useState } from 'react';
 
 type FishRarity = "common" | "uncommon" | "rare" | "legendary" | "mythical" | "the one that got away";
 
@@ -15,16 +15,10 @@ type Props = {
   fish: InventoryFish[];
 };
 
-const rarityColors: Record<FishRarity, string> = {
-  common: "#94a3b8",
-  uncommon: "#4ade80",
-  rare: "#60a5fa",
-  legendary: "#f59e0b",
-  mythical: "#c084fc",
-  "the one that got away": "#f87171",
-};
 
 export function Inventory({ fish }: Props) {
+  const [query, setQuery] = useState('');
+
   if (fish.length === 0) {
     return (
       <div className="inventory-empty">
@@ -51,12 +45,26 @@ export function Inventory({ fish }: Props) {
     new Map()
   );
 
+  const filtered = [...grouped.values()].filter(f =>
+    f.name.toLowerCase().includes(query.toLowerCase())
+  );
+
   return (
     <div className="inventory-list">
-      {[...grouped.values()].map(f => (
+      <input
+        className="inventory-search"
+        type="text"
+        placeholder="Search..."
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+      />
+      {filtered.length === 0 && (
+        <div className="inventory-empty"><p>No matches.</p></div>
+      )}
+      {filtered.map(f => (
         <div key={f.name} className="fish-card">
           <div className="fish-card-img-wrap">
-            <img src={tempfish} alt={f.name} className="fish-card-img" />
+            <img src="/tempfish.png" alt={f.name} className="fish-card-img" style={{ imageRendering: "pixelated" }} />
             {f.quantity > 1 && (
               <span className="fish-card-qty">x{f.quantity}</span>
             )}
@@ -65,7 +73,6 @@ export function Inventory({ fish }: Props) {
             <div className="fish-card-name">{f.name}</div>
             <div
               className="fish-card-rarity"
-              style={{ color: rarityColors[f.rarity] }}
             >
               {f.rarity}
             </div>
