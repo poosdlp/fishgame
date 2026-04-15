@@ -80,6 +80,8 @@ export  const createFish = (): Fishy => {
         tapflag:0, 
         hX:0,
         hY:0,
+
+        journalEntry:fish.journalEntry
         
       };
     }
@@ -110,7 +112,9 @@ export  const createFish = (): Fishy => {
     tapCooldown: 0,
     requiredTaps: Math.floor(Math.random() * 5) + 3, // random number of taps required to catch the fish
     tapflag:0,
-     hX:0,
+    hX:0,
     hY:0,
+
+    journalEntry:fish.journalEntry,
   };
 };
