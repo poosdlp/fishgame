@@ -1,0 +1,15 @@
+info:
+  name: Catch Fish
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: http://{{baseurl}}/api/fish/catch
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

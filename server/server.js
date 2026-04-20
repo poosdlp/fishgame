@@ -1,57 +1,35 @@
+require('dotenv').config();
 const express = require('express');
-const { MongoClient } = require('mongodb');
-
+const cookieParser = require('cookie-parser');
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-const url = 'mongodb://database:27017';
-const client = new MongoClient(url);
+app.set('trust proxy', 1);
 
-const dbName = 'myapp';
-let db;
+app.use(express.json());
+app.use(cookieParser());
 
-// Connect to MongoDB
-async function connectDB() {
-  try {
-    await client.connect();
-    console.log('Successfully connected to MongoDB!');
-    db = client.db(dbName);
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-  }
-}
+app.get('/', (req, res) => {
+  res.send('JWT Auth API running');
+});
 
+const connectDB = require('./config/db');
 connectDB();
 
-// test
-app.get('/', (req, res) => {
-  // connected?
-  const isConnected = client.topology && client.topology.isConnected();
-  
-  res.json({
-    status: 'success',
-    databaseState: isConnected ? 'Connected' : 'Disconnected',
-    message: 'a mongo is speaking. listen and learn. (mogging emoji)'
-  });
-});
+const authRoutes = require('./routes/auth');
+app.use('/auth', authRoutes);
 
-// start the server
-const server = app.listen(PORT, () => {
-  console.log(`Server is listening on http://localhost:${PORT}`);
-});
+const profileRoutes = require('./routes/profile');
+app.use('/profile', profileRoutes);
 
-// shutdown
-process.on('SIGINT', async () => {
-  console.log('\nStop signal received: Closing MongoDB connection...');
-  try {
-    await client.close();
-    console.log('MongoDB connection safely closed.');
-    server.close(() => {
-      console.log('Express server closed. Exiting process.');
-      process.exit(0);
-    });
-  } catch (err) {
-    console.error('Error during shutdown:', err);
-    process.exit(1);
-  }
-});
+const sessionRoutes = require('./routes/session');
+app.use('/session', sessionRoutes);
+
+const fishRoutes = require('./routes/fish');
+app.use('/fish', fishRoutes);
+
+const { setupWebSocket } = require('./ws');
+
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+setupWebSocket(server);
