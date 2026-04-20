@@ -38,6 +38,7 @@ export function useFishingSession({ setState, setBobber, setFishInLake }: Option
   };
 
   const handleFish = () => {
+    console.log('[handleFish] called, setting state to waiting');
     setState('waiting');
     const count = Math.floor(Math.random() * 5) + 8;
     const newFishArray: LakeFish[] = [];
@@ -46,12 +47,15 @@ export function useFishingSession({ setState, setBobber, setFishInLake }: Option
       newFishArray.push(createFish());
     }
 
+    console.log('[handleFish] spawning', newFishArray.length, 'fish');
     setFishInLake(newFishArray);
     const spawnMargin = 200;
-    setBobber({
+    const bobberPos = {
       x: Math.random() * (LakeWidth - spawnMargin * 2) + spawnMargin,
       y: Math.random() * (LakeHeight - spawnMargin * 2) + spawnMargin,
-    });
+    };
+    console.log('[handleFish] placing bobber at', bobberPos);
+    setBobber(bobberPos);
   };
 
   const handleReel = () => {
