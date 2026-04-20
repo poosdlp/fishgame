@@ -71,8 +71,10 @@ function App() {
   useEffect(() => {
     return subscribe((data: unknown) => {
       const msg = data as { action?: string };
+      console.log('[WS] received game message:', msg);
       if (!msg?.action) return;
       const h = handlersRef.current;
+      console.log('[WS] dispatching action:', msg.action);
       switch (msg.action) {
         case 'fish':   h.handleFish();   break;
         case 'reel':   h.handleReel();   break;
