@@ -1,7 +1,7 @@
-import type { Fishy } from "../types/fish";
-import {LakeHeight,LakeWidth} from '../data/lakeDim'
+import type { LakeFish } from "../hooks/useFishSim";
+import { LakeHeight, LakeWidth } from '../data/lakeDim'
 
-export const createFish = (): Fishy => {
+export const createFish = (): LakeFish => {
     const side=Math.floor(Math.random() * 4);
 
 // spawn outside the lake so it has to swim in
@@ -40,10 +40,6 @@ export const createFish = (): Fishy => {
     vy,
     behavior: "swimming",
     tapCount: 0,
-    tapCooldown: 0,
     requiredTaps: Math.floor(Math.random() * 5) + 3, // random number of taps required to catch the fish
-    tapflag:0,
-    hX:0,
-    hY:0,
   };
 };

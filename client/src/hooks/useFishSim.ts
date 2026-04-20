@@ -1,73 +1,98 @@
 import { useEffect, useRef, useState } from "react";
-import type { Fishy } from "../types/fish";
 import { LakeWidth, LakeHeight } from "../data/lakeDim";
+import type { GameState } from "../types/fish";
 
-export function useFishSimulation(bobber: { x: number; y: number } | null) {
-  const [fishInLake, setFishInLake] = useState<Fishy[]>([]);
-  const [targetFishId, setTargetFishId] = useState<string | null>(null);
+// Anonymous fish for in-lake movement — no identity known until caught
+export type LakeFish = {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  behavior: "swimming" | "attracted" | "hovering" | "bite";
+  tapCount: number;
+  requiredTaps: number;
+};
+
+// Clamps fish position to lake bounds
+function applyBoundaries(x: number, y: number, vx: number, vy: number) {
+  let cx = x, cy = y, cvx = vx, cvy = vy;
+  if (cx < 0          && cvx < 0) { cx = 0;          cvx = 0; }
+  if (cx > LakeWidth  && cvx > 0) { cx = LakeWidth;  cvx = 0; }
+  if (cy < 0          && cvy < 0) { cy = 0;          cvy = 0; }
+  if (cy > LakeHeight && cvy > 0) { cy = LakeHeight; cvy = 0; }
+  return { x: cx, y: cy, vx: cvx, vy: cvy };
+}
+
+export function useFishSimulation(bobber: { x: number; y: number } | null, state: GameState, setState: (state: GameState) => void) {
+  const [fishInLake, setFishInLake] = useState<LakeFish[]>([]);
   const bobberRef = useRef<{ x: number; y: number } | null>(null);
-  const hoverQueueRef = useRef<string[]>([]);
+  const stateRef = useRef(state);
+  const targetFishIdRef = useRef<string | null>(null);
+  const hoverGatherTimeRef = useRef(0);
 
   useEffect(() => {
     bobberRef.current = bobber;
+  }, [bobber]);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    // Reset bite-selection state when a cast ends or bobber is removed.
+    if (!bobber || state === "none") {
+      targetFishIdRef.current = null;
+      hoverGatherTimeRef.current = 0;
+    }
+  }, [bobber, state]);
+
+  useEffect(() => {
     let animationId: number;
     let time = 0;
 
     const update = () => {
-      
-      time += 1; 
+      time += 1;
 
-      if(!targetFishId && hoverQueueRef.current.length===2 ){
-          const rand = Math.floor(Math.random() * 2);
-            setTargetFishId(hoverQueueRef.current[rand]);
+      setFishInLake(prev => {
+        // If the selected fish no longer exists (new cast/reset), allow a new selection.
+        if (targetFishIdRef.current && !prev.some(f => f.id === targetFishIdRef.current)) {
+          targetFishIdRef.current = null;
+          hoverGatherTimeRef.current = 0;
         }
-        if(!targetFishId && hoverQueueRef.current.length===1){
-          const firstfish= fishInLake.find(f => f.id === hoverQueueRef.current[0]);
-          if(firstfish && firstfish.tapCount >= firstfish.requiredTaps){
-            setTargetFishId(hoverQueueRef.current[0]);
+
+        // Hover gather timer: wait until 2+ fish are orbiting before selecting a target.
+        if (!targetFishIdRef.current) {
+          const candidates = prev.filter(f => f.behavior === "hovering");
+
+          if (candidates.length >= 2) {
+            hoverGatherTimeRef.current += 1;
+          } else {
+            hoverGatherTimeRef.current = 0;
+          }
+
+          // After 180 frames (~3s at 60fps), randomly pick one hovering fish as the target
+          if (hoverGatherTimeRef.current >= 180) {
+            targetFishIdRef.current = candidates[Math.floor(Math.random() * candidates.length)].id;
+            hoverGatherTimeRef.current = 0;
           }
         }
-        if(targetFishId){
-            console.log("target fish id:",targetFishId)
 
-        }
-        console.log()
-    
-      setFishInLake(prev => 
-        prev.map(fish => {
-          //console.log("fish count:", prev.length);
+        return prev.map(fish => {
           const bobber = bobberRef.current;
-          // console.log("bobber in update:", bobber);
-          // console.log("bobber location", bobber ? `(${bobber.x.toFixed(2)}, ${bobber.y.toFixed(2)})` : "null");
-          // console.log("fish location", `(${fish.x.toFixed(2)}, ${fish.y.toFixed(2)})`);
-          // console.log("fish dist:", bobber ? Math.sqrt((bobber.x - fish.x) ** 2 + (bobber.y - fish.y) ** 2).toFixed(2) : "N/A");
-          
-          const attractionRadius = 150;
-          const hoverRadius = 80;
-          const biteRadius = 10;
-          const maxspeed = 1.3;
-          const minSpeed = 0.2;
+          const attractionRadius = 110;
+          const hoverRadius = 65;
+          const maxspeed = 1.0;
+          const minSpeed = 0.12;
 
-          let {
-          x, y, vx, vy,
-          behavior,
-          tapCount,
-          requiredTaps,
-          tapflag
-          } = fish;
-
+          let { vx, vy, behavior, tapCount } = fish;
           let newVx = vx;
           let newVy = vy;
           let newBehavior = behavior;
-          let newtapcount=tapCount;
-          let newtapreq= requiredTaps;
-          let Ntapflag= tapflag;
-         
 
           let dx = 0;
           let dy = 0;
           let dist = 0;
-            
 
           if (bobber) {
             dx = bobber.x - fish.x;
@@ -76,402 +101,123 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
           }
           if (!isFinite(dist) || dist < 1) dist = 1;
 
-          //caught
-          if (newBehavior === "caught") {
-            return fish; // frozen
-          }
-
-          if(newBehavior === "bite" && bobber) {
-          let hook=1; //eventually replace with mobile logic
-
-          if(hook===1){
-            //pop up with bite screen and start mini game on phone
-            //if win change flag to caught 
-            newBehavior="caught";
+          // Bite state transition — rush toward bobber over several frames
+          if (newBehavior === "bite" && bobber) {
+            if (stateRef.current === "waiting") {
+              setState("bite");
+            }
+            if (stateRef.current === "caught" || stateRef.current === "none") {
+              return fish;
+            }
+            const rushSpeed = 0.18;
+            const newX = fish.x + (bobber.x - fish.x) * rushSpeed;
+            const newY = fish.y + (bobber.y - fish.y) * rushSpeed;
             return {
               ...fish,
-              behavior: newBehavior,
-              x: bobber.x,
-              y: bobber.y,
+              behavior: "bite",
+              x: newX,
+              y: newY,
               vx: 0,
               vy: 0,
-            };}
-            else{
+            };
+          }
 
-            //reset fish to swimming if they escape
-            }
-        }
+          // When a bite is active, scatter hovering/attracted fish away from the bobber
+          const biteActive = stateRef.current === "bite" || prev.some(f => f.behavior === "bite");
+          if (biteActive && (newBehavior === "hovering" || newBehavior === "attracted")) {
+            newBehavior = "swimming";
+            const fleeAngle = Math.atan2(fish.y - (bobber?.y ?? fish.y), fish.x - (bobber?.x ?? fish.x));
+            newVx = Math.cos(fleeAngle) * 1.5;
+            newVy = Math.sin(fleeAngle) * 1.5;
+            const fb = applyBoundaries(fish.x + newVx, fish.y + newVy, newVx, newVy);
+            return { ...fish, behavior: newBehavior, ...fb, tapCount: 0 };
+          }
 
-        let hook=0; //temp hook variable to simulate hook state, eventually replace with mobile logic 
+          // Hovering behavior with orbital movement
+          if (newBehavior === "hovering" && bobber) {
+            const phaseOffset = (parseInt(fish.id.replace(/-/g, "").slice(0, 6), 16) % 1000) / 1000 * Math.PI * 2;
+            const angle = time * 0.008 + phaseOffset;
+            const newtapCount = tapCount + 1;
 
-        
-        if(newBehavior === "hovering" && hook === 0 && bobber ) {
-
-          let test=0;
-          console.log("in hovering----------------------------------------");
-
-
-          if (test===0){
-
-            let hdx = fish.hX - fish.x;
-            let hdy = fish.hY - fish.y;
-            let hdist = Math.sqrt(hdx * hdx + hdy * hdy);
-
-
-            if(newtapreq<= newtapcount){
-              console.log("switch to bite----------------------------------------");
-              return{
-                ...fish,
-                behavior: newBehavior,
-                x,
-                y,
-                vx: 0,
-                vy: 0,
-                tapCount:newtapcount,
-                tapflag:Ntapflag
-              };
-              //newBehavior="bite"
-              
-            }
-
-            
-
-            if(Ntapflag===1 &&(newtapreq> newtapcount)){
-              console.log("flag is 1----------------------------------------");
-
-              if(dist>=hoverRadius){
-                console.log("flag switch to 0---------------------------------------");
-                Ntapflag=0;
+            if (targetFishIdRef.current === fish.id) {
+              if (newtapCount >= fish.requiredTaps) {
+                // 50/50 chance: fish either commits to biting or chickens out
+                if (Math.random() < 0.5) {
+                  newBehavior = "hovering";
+                  targetFishIdRef.current = null;
+                  hoverGatherTimeRef.current = 0;
+                } else {
+                  newBehavior = "bite";
+                }
+              } else {
+                // Target fish springs toward the bobber center
+                newVx = dx * 0.05;
+                newVy = dy * 0.05;
               }
-
-
-              console.log("move away from bob dist:----------------------------------------",dist);
-              newVx += (hdx / hdist)*0.01;
-              newVy += (hdy / hdist)*0.01;
-
-
-
-
-
-              return{
-                  ...fish,
-                  behavior: newBehavior,
-                  x:fish.x+newVx,
-                  y:fish.y + newVy,
-                  vx: newVx,
-                  vy: newVy,
-                  tapCount:newtapcount,
-                  tapflag: Ntapflag,
-                  };
-
-
+            } else {
+              // Non-target fish orbit the bobber
+              const targetX = bobber.x + Math.cos(angle) * hoverRadius;
+              const targetY = bobber.y + Math.sin(angle) * hoverRadius;
+              newVx = (targetX - fish.x) * 0.05;
+              newVy = (targetY - fish.y) * 0.05;
             }
 
-            if(Ntapflag===0 &&(newtapreq> newtapcount)){
+            const hb = applyBoundaries(fish.x + newVx, fish.y + newVy, newVx, newVy);
+            return { ...fish, behavior: newBehavior, ...hb, tapCount: newtapCount };
+          }
 
-              console.log("flag is 0----------------------------------------");
-
-            if(dx<= biteRadius && dy<=biteRadius){
-
-              console.log("we biting----------------------------------------");
-
-
-              Ntapflag=1
-              newtapcount+=1;
-
-              console.log("dist from bob STOP----------------------------------------");
-
-              return{
-                ...fish,
-                behavior: newBehavior,
-                x,
-                y,
-                vx: vx,
-                vy: vy,
-                tapCount:newtapcount,
-                tapflag:Ntapflag
-              };}
-              else{
-                
-              console.log("go to bob dist=----------------------------------------",dist);
-                newVx += (dx / dist)*0.001;
-                newVy += (dy / dist)*0.001;
-                return{
-                  ...fish,
-                  behavior: newBehavior,
-                  x:fish.x+newVx,
-                  y:fish.y + newVy,
-                  vx: newVx,
-                  vy: newVy,
-                  tapCount:newtapcount,
-                  tapflag:Ntapflag
-
-                    };
-
-
-
-              }
+          // Attracted behavior: moving toward bobber
+          if (newBehavior === "attracted") {
+            if (bobber && dist < hoverRadius && !biteActive) {
+              newBehavior = "hovering";
             }
 
+            const closeBoost = dist < 60 ? 1.4 : 1;
+            const speed = Math.max(
+              minSpeed,
+              Math.min(dist / attractionRadius, 1) * maxspeed
+            );
 
-
-          }
-
-          if(test===1){
-            
-            
-
-            if(dx<= biteRadius && dy<=biteRadius){
-
-              console.log("dist from bob STOP----------------------------------------");
-
-              return{
-            ...fish,
-            behavior: newBehavior,
-            x,
-            y,
-            vx: 0,
-            vy: 0,
-              };}
-              else{
-                
-              console.log("go to bob dist=----------------------------------------",dist);
-                newVx += (dx / dist)*0.001;
-                newVy += (dy / dist)*0.001;
-                return{
-                  ...fish,
-                  behavior: newBehavior,
-                  x:fish.x+newVx,
-                  y:fish.y + newVy,
-                  vx: newVx,
-                  vy: newVy,
-                    };
-
-
-
-              }
-            
-          }
-
-          if(test===2){
-            if(dist<= biteRadius){
-
-
-              console.log("move away from bob dist:----------------------------------------",dist);
-              newVx += ((0-dx) / dist)*0.001;
-              newVy += ((0-dy) / dist)*0.001;
-
-
-              return{
-                  ...fish,
-                  behavior: newBehavior,
-                  x:fish.x+newVx,
-                  y:fish.y + newVy,
-                  vx: newVx,
-                  vy: newVy,
-                    };
-
-
-
-
-            }else{
-
-              
-
-                              console.log("STOOOOPy from bob dist:----------------------------------------",dist);
-
-
-
-                return{
-                  ...fish,
-                  behavior: newBehavior,
-                  x,
-                  y,
-                  vx: 0,
-                  vy: 0,
-                    };
-                    
-
-              
-            }
-            
-
-            
-
-
-
-
-           
-          }
-
-
-
-            
-          
-          // const seed = Number(fish.id.slice(0, 5));
-          // const angle = time * 0.01 + seed;
-      
-
-          // const orbitX = Math.cos(angle) * hoverRadius; 
-          // const orbitY = Math.sin(angle) * hoverRadius;
-
-          // const pushX = -orbitX * 0.3; // push away from bobber to create tension
-          // const pushY = -orbitY * 0.3;
-          
-
-          // const pullStrength = 0.5;
-
-          // const pullX = dx * pullStrength;
-          // const pullY = dy * pullStrength;
-
-          // let newtapCount = tapCount;
-          // let newTapCooldown = Math.max(0, tapCooldown - 1);
-
-
-          // if(dist < biteRadius && tapCooldown <= 0) {
-          //   console.log("in bite radius, tap count:", tapCount, "cooldown:", tapCooldown);
-          //   console.log("target fish id:", targetFishId, "temp id:", tempID);
-
-          //   newtapCount = tapCount + 1;
-          //   newTapCooldown = 500; // 30 frames cooldown
-
-          // }
-
-          // if(tapCooldown > 250 && dist<(hoverRadius-20)) {// move away from bobber slightly during cooldown to give player a chance to tap again, eventually replace with mobile logic that gives player a chance to tap again
-          //   console.log("moving away--------------------------------");
-          //   newVx += (pushX / dist) * 0.5; 
-          //   newVy += (pushY / dist) * 0.5;
-          // }
-          // if(tapCooldown < 100&&dist>(hoverRadius -30)) {
-          //   console.log("move toward--------------------------");
-          //   newVx += (pullX / dist) * 0.5; // move towards bobber when cooldown is almost up to simulate fish being pulled in  
-          //   newVy += (pullY / dist) * 0.5;
-          // }
-
-
-          // if ( targetFishId && targetFishId===tempID &&newtapCount >= fish.requiredTaps)  {
-          //   console.log("fish is going to bite, tap count:", newtapCount);
-          //   //newBehavior = "bite";
-
-          // }
-
-          // return {
-          //   ...fish,
-          //   behavior: newBehavior,
-          //   x: fish.x + newVx,
-          //   y: fish.y + newVy,
-          //   vx: newVx,
-          //   vy: newVy,
-          //   tapCount: newtapCount,
-          //   tapCooldown: newTapCooldown,
-          // };
-
-          return fish;
-
-
-
-          
-         }
-    
-
-        if (newBehavior === "attracted") {
-                   // console.log("attracted logic running");
-
-            const HX= fish.x;
-            const HY= fish.y;
-
-             
-
-
-          if(bobber && dist < hoverRadius) {
-            newBehavior = "hovering";
-            
-          }
-
-          if(!targetFishId){
-            if(!hoverQueueRef.current.includes(fish.id) && hoverQueueRef.current.length <2){
-              hoverQueueRef.current.push(fish.id)
-              console.log("added fish to Q-----------------------------------");
-            }
- 
-        }
-        //turn quicker
-          //const closeBoost = dist < 70 ? 2 : 1;
-
-                    
-          const speed = Math.max(
-            minSpeed,
-            Math.min(dist / attractionRadius, 1) * maxspeed
-          );
-          
-
-          const targetVx = (dx / dist) * speed;
-          const targetVy = (dy / dist) * speed;
-
-          const turnSpeed = 0.15; // responsiveness
-          const accel = 0.03;     // natural pull
-
-          // steering (fast response)
-          newVx += (targetVx - newVx) * turnSpeed;
-          newVy += (targetVy - newVy) * turnSpeed;
-
-          // acceleration (organic feel)
-          newVx += (dx / dist) * accel ;
-          newVy += (dy / dist) * accel;
-
-          // wobble (personality)
-          const seed = Number(fish.id.slice(0, 8)) || 0; // prevent NaN
-          const wobbleStrength = 0.5;
-          const wobbleSpeed = 0.1;
-
-          // optional: reduce wobble when close to bobber
-          const wobbleFactor = Math.max(dist / attractionRadius, 0.1);
-
-          const wobbleX = Math.sin(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
-          const wobbleY = Math.cos(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
-
-          return {
-            ...fish,
-            behavior: newBehavior,
-            x: fish.x + newVx + wobbleX,
-            y: fish.y + newVy + wobbleY,
-            vx: newVx,
-            vy: newVy,
-            hX: HX,
-            hY : HY,
-
-          };
-
-        }
-
-        if(newBehavior === "swimming") {
-
-          //console.log("swimming logic running");
-          //console.log("fish dist:", dist);
-
-
-          if (bobber && dist < attractionRadius) {
-            //console.log("entering attraction radius, behavior changing to attracted");
-            const speed = Math.min(dist / attractionRadius, 1) * maxspeed;
             const targetVx = (dx / dist) * speed;
             const targetVy = (dy / dist) * speed;
 
-            const turnSpeed = 0.2;   // responsiveness
-            const accelBoost = 0.05; // extra pull
+            const turnSpeed = 0.1;
+            const accel = 0.018;
 
             newVx += (targetVx - newVx) * turnSpeed;
             newVy += (targetVy - newVy) * turnSpeed;
+            newVx += (dx / dist) * accel * closeBoost;
+            newVy += (dy / dist) * accel * closeBoost;
 
-            // extra pull so it doesn’t feel too sluggish when far away
-            newVx += (dx / dist) * accelBoost;
-            newVy += (dy / dist) * accelBoost;
-            //console.log("changing to attracted now");
-            newBehavior = "attracted";
+            const seed = Number(fish.id.slice(0, 8)) || 0;
+            const wobbleStrength = 0.5;
+            const wobbleSpeed = 0.1;
+            const wobbleFactor = Math.max(dist / attractionRadius, 0.1);
+
+            const wobbleX = Math.sin(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
+            const wobbleY = Math.cos(time * wobbleSpeed + seed) * wobbleStrength * wobbleFactor;
+
+            const ab = applyBoundaries(fish.x + newVx + wobbleX, fish.y + newVy + wobbleY, newVx, newVy);
+            return { ...fish, behavior: newBehavior, ...ab };
           }
-          // 🐟 normal movement + wobble
-            const speed = Math.sqrt(newVx * newVx + newVy * newVy);
-            const maxSpeed = 1.5;
 
+          // Swimming behavior: free-form movement
+          if (newBehavior === "swimming") {
+            if (bobber && dist < attractionRadius) {
+              const speed = Math.min(dist / attractionRadius, 1) * maxspeed;
+              const targetVx = (dx / dist) * speed;
+              const targetVy = (dy / dist) * speed;
+              const turnSpeed = 0.12;
+              const accelBoost = 0.02;
+              newVx += (targetVx - newVx) * turnSpeed;
+              newVy += (targetVy - newVy) * turnSpeed;
+              newVx += (dx / dist) * accelBoost;
+              newVy += (dy / dist) * accelBoost;
+              newBehavior = "attracted";
+            }
+
+            const speed = Math.sqrt(newVx * newVx + newVy * newVy);
+            const maxSpeed = 1.1;
             if (speed > maxSpeed) {
               newVx = (newVx / speed) * maxSpeed;
               newVy = (newVy / speed) * maxSpeed;
@@ -480,53 +226,35 @@ export function useFishSimulation(bobber: { x: number; y: number } | null) {
             const wobbleX = Math.sin(time + fish.y * 0.05) * 0.2;
             const wobbleY = Math.cos(time + fish.x * 0.06) * 0.2;
 
-            if (Math.random() < 0.02) { // 2% chance per frame
+            if (Math.random() < 0.01) {
               const angle = Math.random() * (Math.PI / 4);
               const direction = Math.random() < 0.5 ? -1 : 1;
               const theta = angle * direction;
-
               const rotatedVx = newVx * Math.cos(theta) - newVy * Math.sin(theta);
               const rotatedVy = newVx * Math.sin(theta) + newVy * Math.cos(theta);
-
               newVx = rotatedVx;
               newVy = rotatedVy;
             }
 
-            return {
-              ...fish,
-              behavior: newBehavior,
-              x: fish.x + newVx + wobbleX,
-              y: fish.y + newVy + wobbleY,
-              vx: newVx,
-              vy: newVy,
-            };
-
+            const sb = applyBoundaries(fish.x + newVx + wobbleX, fish.y + newVy + wobbleY, newVx, newVy);
+            return { ...fish, behavior: newBehavior, ...sb };
           }
 
-
-
-            return fish;
-
-
-          })
-        .filter(fish =>
-        fish.x > -100 &&
-        fish.x < LakeWidth + 100 &&
-        fish.y > -100 &&
-        fish.y < LakeHeight + 100
-          )
-          
-    ); 
-
-    
+          return fish;
+        });
+      });
 
       animationId = requestAnimationFrame(update);
-    
     };
 
     animationId = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(animationId);
-  }, [bobber]);
 
-  return { fishInLake, setFishInLake, targetFishId };
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
+  return { fishInLake, setFishInLake };
+
+
+
+
 }

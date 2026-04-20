@@ -1,24 +1,40 @@
 import type { InventoryFish } from '../types/fish';
 
-// after player successfully catches fish, successful mini play, show fish stats, add fish to inventory and return to waiting for a bite.  
+type CaughtFishData = InventoryFish;
+
 type Props = {
-  fish: InventoryFish | null;
+  fish: CaughtFishData | null;
   onReset: () => void;
-};  
+};
+
+const rarityColor: Record<string, string> = {
+  common: '#aaa',
+  uncommon: '#4caf50',
+  rare: '#2196f3',
+  legendary: '#ff9800',
+  mythical: '#e040fb',
+  'the one that got away': '#f44336',
+};
 
 export function CaughtFish({ fish, onReset }: Props) {
   return (
-    <div>
-      <h2>Congratulations! You caught a fish!</h2>
-      {fish && (
-        <div>
-          <p><strong>{fish.name}</strong></p>
-          <p>Rarity: {fish.rarity}</p>
-          <p>Length: {fish.length} cm</p>
-          <p>Weight: {typeof fish.weight === 'number' ? `${fish.weight} g` : fish.weight}</p>
-        </div>
-      )}
-      <button onClick={onReset}>Done</button>
+    <div className="caught-overlay">
+      <div className="caught-card">
+        <h2 className="caught-title">You caught a fish!</h2>
+        {fish && (
+          <div className="caught-details">
+            <p className="caught-name">{fish.name}</p>
+            <p className="caught-rarity" style={{ color: rarityColor[fish.rarity] || '#fff' }}>
+              {fish.rarity}
+            </p>
+            <div className="caught-stats">
+              <span>📏 {fish.length} cm</span>
+              <span>⚖️ {fish.weight === "how rude to ask" ? "???" : `${fish.weight} kg`}</span>
+            </div>
+          </div>
+        )}
+        <button className="caught-done-btn" onClick={onReset}>Done</button>
+      </div>
     </div>
   );
 }

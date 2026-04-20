@@ -10,10 +10,19 @@ export default function useGameSocket(token: string | null, onMessage?: MessageH
   useEffect(() => {
     if (!token) return;
 
-    const ws = new WebSocket(wsUrl(token));
+    const url = wsUrl(token);
+    console.log('[WS] connecting to:', url);
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
-    ws.onopen = () => setConnected(true);
+    ws.onopen = () => {
+      console.log('[WS] connected');
+      setConnected(true);
+    };
+
+    ws.onerror = (err) => {
+      console.error('[WS] error:', err);
+    };
 
     ws.onmessage = (event) => {
       try {
@@ -25,8 +34,11 @@ export default function useGameSocket(token: string | null, onMessage?: MessageH
     };
 
     ws.onclose = () => {
-      setConnected(false);
-      wsRef.current = null;
+      // Only clear if this is still the active socket (StrictMode can cause stale closes)
+      if (wsRef.current === ws) {
+        setConnected(false);
+        wsRef.current = null;
+      }
     };
 
     return () => {
@@ -36,7 +48,11 @@ export default function useGameSocket(token: string | null, onMessage?: MessageH
 
   const send = useCallback((data: unknown) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(data));
+      const msg = JSON.stringify(data);
+      console.log('[WS] sending:', msg);
+      wsRef.current.send(msg);
+    } else {
+      console.warn('[WS] send failed, readyState:', wsRef.current?.readyState ?? 'no socket');
     }
   }, []);
 

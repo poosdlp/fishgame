@@ -13,7 +13,7 @@ const {
 
 const router = express.Router();
 
-const SESSION_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const SESSION_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Web client creates a pending session
 router.post('/create', async (req, res) => {
@@ -67,7 +67,7 @@ router.get('/:sessionId/status', async (req, res) => {
       setRefreshCookie(res, refreshToken);
 
       // Mark session consumed so tokens can't be issued again
-      await Session.deleteOne({ _id: doc._id });
+      // await Session.deleteOne({ _id: doc._id });
 
       return res.json({ status: 'approved', accessToken });
     }

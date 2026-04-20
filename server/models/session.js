@@ -12,6 +12,8 @@ const sessionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Grace period: MongoDB deletes 5 minutes after expiresAt so the app-level
+// expiry logic handles it first without races.
+sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 300 });
 
 module.exports = mongoose.model('Session', sessionSchema);

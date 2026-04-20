@@ -88,11 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, token, isAuthenticated, logout }}>
-      <div className="header">
-        <span>Welcome, {user?.username || user?.email}!</span>
-        <button onClick={logout}>Logout</button>
-      </div>
-      {children}
+      <div className="app-chrome">{children}</div>
     </AuthContext.Provider>
   )
 }

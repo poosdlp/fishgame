@@ -1,145 +1,214 @@
-import {useState, useEffect} from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { BiteAlert } from './components/bitealert';
 import { CaughtFish } from './components/caughtfish';
-import { WaitingForABite } from './components/waitingforabite';
-import { catchFish as catchFishApi, getInventory } from './api';
-
-import type {GameState,Fishy,InventoryFish} from './types/fish'
-import {LakeHeight,LakeWidth} from './data/lakeDim'
-import { createFish } from "./utils/fishCreate";
+import { Inventory } from './components/inventory';
+import { Leaderboard } from './components/leaderboard';
+import { Tutorial } from './components/tutorial';
+import { SwingSign } from './components/SwingSign';
+import type { GameState } from './types/fish';
+import { LakeHeight, LakeWidth } from './data/lakeDim';
 import { useFishSimulation } from "./hooks/useFishSim";
-import { InventorySidebar } from "./components/InventorySidebar";
-import { LeaderboardSidebar } from "./components/LeaderboardSidebar";
-
+import { useFishingSession } from './hooks/useFishingSession';
+import { useAuth } from './AuthContext';
+import { useSocket } from './SocketContext';
 
 import './App.css'
-
 
 function App() {
   const [state, setState] = useState<GameState>("none");
   const [bobber, setBobber] = useState<{x: number, y: number} | null>(null);
+
   const [showInventory, setShowInventory] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const isAnySidebarOpen = showInventory || showLeaderboard;
-  const [inventory, setInventory] = useState<InventoryFish[]>([]);
-  const [lastCatch, setLastCatch] = useState<InventoryFish | null>(null);
-  
-  const { fishInLake, setFishInLake } = useFishSimulation(bobber);
+  const { user, logout } = useAuth();
+  const { send: wsSend, subscribe, connected } = useSocket();
 
+  const { fishInLake, setFishInLake } = useFishSimulation(bobber, state, setState);
+
+  const {
+    inventory,
+    lastCaughtFish,
+    handleCatch,
+    handleFish,
+    handleReel,
+    handleCaught,
+  } = useFishingSession({
+    setState,
+    setBobber,
+    setFishInLake,
+  });
+
+  // Periodically broadcast "ready" + current state so other devices know the game client is live
+  const stateForReadyRef = useRef(state);
+  stateForReadyRef.current = state;
   useEffect(() => {
-    getInventory().then(setInventory).catch(() => {});
-  }, []);
+    if (!connected) return;
+    const send = () => wsSend({ type: 'ready', state: stateForReadyRef.current });
+    // Send immediately after a short delay, then every 3 seconds
+    const initial = setTimeout(send, 100);
+    const interval = setInterval(send, 3000);
+    return () => { clearTimeout(initial); clearInterval(interval); };
+  }, [connected, wsSend]);
 
-  const handleCatch = async () => {
-    try {
-      const fish = await catchFishApi();
-      setLastCatch(fish);
-      setInventory(prev => [fish, ...prev]);
-    } catch {
-      // still transition to caught state even if save fails
+  // Broadcast game state changes to other devices
+  const prevStateRef = useRef(state);
+  useEffect(() => {
+    if (state !== prevStateRef.current) {
+      prevStateRef.current = state;
+      wsSend({ type: 'state', state });
     }
-    setState("caught");
-  };
-   
-   
+  }, [state, wsSend]);
 
+  // Refs for handlers so the WS listener always calls the latest version
+  const handlersRef = useRef({ handleFish, handleReel, handleCatch, handleCaught });
+  useEffect(() => {
+    handlersRef.current = { handleFish, handleReel, handleCatch, handleCaught };
+  });
+
+  // Listen for incoming WebSocket game-action messages from other devices
+  useEffect(() => {
+    return subscribe((data: unknown) => {
+      const msg = data as { action?: string };
+      if (!msg?.action) return;
+      const h = handlersRef.current;
+      switch (msg.action) {
+        case 'fish':   h.handleFish();   break;
+        case 'reel':   h.handleReel();   break;
+        case 'catch':  h.handleCatch();  break;
+        case 'caught': h.handleCaught(); break;
+      }
+    });
+  }, [subscribe]);
+
+  // Wrappers that perform the action locally AND broadcast via WebSocket
+  const doFish = useCallback(() => {
+    handleFish();
+    wsSend({ action: 'fish' });
+  }, [handleFish, wsSend]);
+
+  const doReel = useCallback(() => {
+    handleReel();
+    wsSend({ action: 'reel' });
+  }, [handleReel, wsSend]);
+
+  const doCatch = useCallback(() => {
+    handleCatch();
+    wsSend({ action: 'catch' });
+  }, [handleCatch, wsSend]);
+
+  const doCaught = useCallback(() => {
+    handleCaught();
+    wsSend({ action: 'caught' });
+  }, [handleCaught, wsSend]);
 
   return(
-    <div> 
-      <InventorySidebar
-        isOpen={showInventory} 
-        onToggle={()=> setShowInventory(prev=>!prev)}
-        inventory={inventory} />
-      <LeaderboardSidebar
-        isOpen={showLeaderboard}
-        onToggle={() => setShowLeaderboard(prev => !prev)}
-      />
-    {/* OVERLAY */}
-    {(isAnySidebarOpen) && (
-      <div className="overlay" onClick={() => {
-          setShowInventory(false);
-          setShowLeaderboard(false);
-        }} />
-    )}
-       
+    <div className="app-shell">
+      {/* OVERLAY */}
+      {isAnySidebarOpen && (
+        <div
+          className="overlay"
+          onClick={() => {
+            setShowInventory(false);
+            setShowLeaderboard(false);
+          }}
+        />
+      )}
+
+      {/* LEFT SIDEBAR */}
+      <div className={`sidebar left ${showInventory ? "open" : "collapsed"}`}>
+        <div
+          className="side-tab left-tab"
+          onClick={() => setShowInventory(prev => !prev)}
+        >
+          {showInventory ? "◀" : "▶"}
+        </div>
+
+        {showInventory && (
+          <>
+            <h2>Inventory</h2>
+            <Inventory fish={inventory} />
+          </>
+        )}
+      </div>
+
+      {/* RIGHT SIDEBAR */}
+      <div className={`sidebar right ${showLeaderboard ? "open" : "collapsed"}`}>
+        <div
+          className="side-tab right-tab"
+          onClick={() => setShowLeaderboard(prev => !prev)}
+        >
+          {showLeaderboard ? "▶" : "◀"}
+        </div>
+
+        {showLeaderboard && (
+          <>
+            <h2>Leaderboard</h2>
+            <Leaderboard />
+          </>
+        )}
+      </div>
+
+      {/* TUTORIAL */}
+      {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
+
       {/* MAIN CONTENT */}
-      <div style={{textAlign: "center", marginTop: "50px"}}>
-        <h1>Fishing Game thats very cool and girly but in a way that everyone loves</h1>
-        <button onClick={() => {
-            const count = Math.floor(Math.random() * 5) + 6; // random 6-10
-            const newFishArray: Fishy[] = [];
-
-            for (let i = 0; i < count; i++) {
-              newFishArray.push(createFish());
-            }
-
-            setFishInLake(newFishArray);
-            setState("waiting");
-            setBobber({
-              x: Math.random() * (LakeWidth - 100) + 50,
-              y: Math.random() * (LakeHeight - 100) + 50,
-            });
-          }}>Play</button>
+      <div className="game-layout">
+        <SwingSign />
         
         <div className="game-screen">
           <div className="lake">
             {bobber && (
-              <div style={{
-                position: "absolute",
-                left: bobber.x - 10,
-                top: bobber.y - 10,
-                width: 20,
-                height: 20,
-                background: "red",
-                borderRadius: "50%",
-                border: "3px solid white",
-                zIndex: 10,
-              }} />
+              <div
+                className={`bobber${state === "bite" ? " bobber-bite" : ""}${state === "caught" ? " bobber-catch" : ""}`}
+                style={{
+                  left: `${(bobber.x / LakeWidth) * 100}%`,
+                  top: `${(bobber.y / LakeHeight) * 100}%`,
+                }}
+              />
             )}
             {fishInLake.map(fish => (
               <div
                 key={fish.id}
+                className={`fish-dot${fish.behavior === "hovering" ? " fish-dot-hover" : ""}${fish.behavior === "bite" ? " fish-dot-bite" : ""}`}
                 style={{
-                  position: "absolute",
-                  left: fish.x,
-                  top: fish.y,
-                  width: 20,
-                  height: 20,
-                  background: "orange",
-                  borderRadius: "50%",
+                  left: `${(fish.x / LakeWidth) * 100}%`,
+                  top: `${(fish.y / LakeHeight) * 100}%`,
                 }}
               />
             ))}
           </div>
         </div>
 
+        <div className="action-controls">
+          {state === "none" && (
+            <button onClick={doFish}>Fish</button>
+          )}
 
-        {/* Start screen */}
+          {state === "waiting" && (
+            <button onClick={doReel}>Reel</button>
+          )}
 
-        {state === "none" && (
-          <div>Start the game!</div>         
-          
-        )}
-        {/* Waiting */}
-        {state === "waiting" && (
-          <WaitingForABite onFishBite={() => setState("bite")} />
-        )}
+          {state === "bite" && (
+            <BiteAlert onCatch={doCatch} />
+          )}
+        </div>
+      </div>
 
-        {/* Bite */}
-        {state === "bite" && (
-          <BiteAlert onCatch={handleCatch} />
-        )}
+      {/* Fullscreen caught popup */}
+      {state === "caught" && (
+        <CaughtFish fish={lastCaughtFish} onReset={doCaught} />
+      )}
 
-        {/* Caught */}
-        {state === "caught" && (
-          <>
-            <CaughtFish fish={lastCatch} onReset={() => { setLastCatch(null); setState("none"); }} />
-          </>
-        )}
-
-
+      <div className="bottom-bar">
+        <span>Welcome, {user?.username || user?.email}!</span>
+        <div className="bottom-bar-actions">
+          <button onClick={() => setShowTutorial(true)}>?</button>
+          <button onClick={logout}>Logout</button>
+        </div>
+      </div>
     </div>
-  </div>
   );
 }
 
