@@ -182,15 +182,15 @@ function App() {
         </div>
 
         <div className="action-controls">
-          {state === "none" && (
+          {import.meta.env.DEV && state === "none" && (
             <button onClick={doFish}>Fish</button>
           )}
 
-          {state === "waiting" && (
+          {import.meta.env.DEV && state === "waiting" && (
             <button onClick={doReel}>Reel</button>
           )}
 
-          {state === "bite" && (
+          {import.meta.env.DEV && state === "bite" && (
             <BiteAlert onCatch={doCatch} />
           )}
         </div>

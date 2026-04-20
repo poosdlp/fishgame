@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const RefreshToken = require('../models/refreshToken');
 
-const ACCESS_TTL = '15m';
+const ACCESS_TTL = '60m';
 const REFRESH_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
 
 function hashToken(token) {

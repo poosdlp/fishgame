@@ -13,7 +13,7 @@ const {
 
 const router = express.Router();
 
-const SESSION_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const SESSION_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 // Web client creates a pending session
 router.post('/create', async (req, res) => {
