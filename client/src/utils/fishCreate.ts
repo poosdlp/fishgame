@@ -31,8 +31,13 @@ export const createFish = (): LakeFish => {
 
     const vx = (centerX - x) * 0.001;
     const vy = (centerY - y) * 0.001;
+  // crypto.randomUUID() requires HTTPS; fall back for insecure contexts
+  const id = typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+
   return {
-    id: crypto.randomUUID(),
+    id,
 
     x,
     y,
