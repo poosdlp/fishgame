@@ -302,19 +302,18 @@ img {
   pointer-events: none;
 }
 
-.fish-sprite {
+.fish-dot {
   position: absolute;
-  width: 54px;
-  height: 36px;
-  margin-left: -27px;
-  margin-top: -18px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25));
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffd98e, #ef8d29 70%, #d76a0b 100%);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.18);
 }
 
-.fish-sprite-hover {
+.fish-dot-hover {
   animation: fish-bob 0.58s ease-in-out infinite alternate;
 }
 
@@ -324,7 +323,7 @@ img {
 }
 
 /* Fish bite: glow + pulse while rushing to bobber */
-.fish-sprite-bite {
+.fish-dot-bite {
   z-index: 5;
   animation: fish-bite-pulse 0.35s ease-in-out infinite alternate;
   filter: drop-shadow(0 0 10px rgba(255, 200, 50, 0.55));
@@ -773,12 +772,6 @@ img {
   padding: 1rem 0;
 }
 
-.tutorial-sprite {
-  width: min(320px, 62vw);
-  max-height: 34vh;
-  object-fit: contain;
-}
-
 .tutorial-title {
   margin: 0;
   font-size: 0.95rem;
@@ -807,7 +800,7 @@ img {
   border-color: rgba(125, 211, 252, 0.45);
 }
 
-.fish-sprite,
+.fish-dot,
 .bobber,
 .side-tab {
   image-rendering: pixelated;
@@ -867,10 +860,6 @@ img {
 
   .tutorial-overlay {
     padding: 16px;
-  }
-
-  .tutorial-sprite {
-    width: min(250px, 76vw);
   }
 
   .tutorial-btn,
