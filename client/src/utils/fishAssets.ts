@@ -21,7 +21,7 @@ export const fishAssets: FishAsset[] = [
   { name: 'livia fish', rarity: 'the one that got away', imagePath: '/fish/livfish.png', fixedLength: 170, fixedWeight: 'how rude to ask' },
   { name: 'axel fish', rarity: 'the one that got away', imagePath: '/fish/axelfish.png', fixedLength: 177, fixedWeight: 'how rude to ask' },
   { name: 'marcus fish', rarity: 'the one that got away', imagePath: '/fish/marcusfish.png', fixedLength: 180, fixedWeight: 'how rude to ask' },
-  { name: 'jake fish', rarity: 'the one that got away', imagePath: '/fish/jakefish.png', fixedLength: 187, fixedWeight: 'how rude to ask' },
+  { name: 'jake fish', rarity: 'the one that got away', imagePath: '/fish/jakefish.jpeg', fixedLength: 187, fixedWeight: 'how rude to ask' },
   { name: 'josh fish', rarity: 'the one that got away', imagePath: '/fish/joshfish.png', fixedLength: 180, fixedWeight: 'how rude to ask' },
 ];
 
