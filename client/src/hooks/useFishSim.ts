@@ -135,7 +135,12 @@ export function useFishSimulation(bobber: { x: number; y: number } | null, state
 
           // Hovering behavior with orbital movement
           if (newBehavior === "hovering" && bobber) {
-            const phaseOffset = (parseInt(fish.id.replace(/-/g, "").slice(0, 6), 16) % 1000) / 1000 * Math.PI * 2;
+            // Derive a stable phase from the fish id; works with both UUIDs and fallback IDs
+            let hash = 0;
+            for (let i = 0; i < fish.id.length; i++) {
+              hash = ((hash << 5) - hash + fish.id.charCodeAt(i)) | 0;
+            }
+            const phaseOffset = ((hash & 0x7fffffff) % 1000) / 1000 * Math.PI * 2;
             const angle = time * 0.008 + phaseOffset;
             const newtapCount = tapCount + 1;
 
