@@ -4,6 +4,13 @@ entryPoints:
   websecure:
     address: ":443"
 
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "jakebytes@gmail.com"
+      storage: "/var/traefik/acme.json"
+      tlsChallenge: {}
+
 providers:
   file:
     directory: "/etc/traefik/dynamic"
