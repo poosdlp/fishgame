@@ -24,7 +24,7 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./traefik/dynamic:/etc/traefik/dynamic:z
+      - ./traefik/dynamic_dev:/etc/traefik/dynamic:z
 
   database:
     ports:
