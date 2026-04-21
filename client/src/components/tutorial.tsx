@@ -12,11 +12,11 @@ const sections: TutorialSection[] = [
   },
   {
     title: "Downloading",
-    body: "Phising requires you to download a mobile app on your android device. Phishing requires both the website and mobile app to be active as your phone is the fishing rod",
+    body: "Phising requires you to download a mobile app on your android device. Get Hooked! requires both the website and mobile app to be active as your phone is the fishing rod",
   },
   {
     title: "Registering",
-    body: "Once you have installed Phishing on your android device, you will have the ability to register a Phising account. An email will be sent to verify your account",
+    body: "Once you have installed Get Hooked! on your android device, you will have the ability to register a Phising account. An email will be sent to verify your account",
   },
   {
     title: "Syncing",
@@ -25,7 +25,7 @@ const sections: TutorialSection[] = [
   
   {
     title: "Casting",
-    body: "Important: Keep a finger on the device while fishing or reelling otherwise your gesture will not be detected. To fish ",
+    body: "Move your device like you would a fishing rod to cast your line.",
   },
   {
     title: "Fish Behavior",
@@ -33,11 +33,11 @@ const sections: TutorialSection[] = [
   },
   {
     title: "The Bite",
-    body: "Once enough fish are hovering, one will be chosen to attempt a bite. There's a 50/50 chance it commits — or backs off and you have to wait again.",
+    body: "Once enough fish are hovering, one will be chosen to attempt a bite. There's a 50/50 chance it commits or backs off and you have to wait again.",
   },
   {
     title: "Catching",
-    body: "When the bobber starts dunking and 'Catch Fish!' appears, click it fast to reel in your catch!",
+    body: "When the bobber starts dunking and your phone vibrates, hook the fish by yanking your phone upwards!",
   },
   {
     title: "Inventory & Leaderboard",
