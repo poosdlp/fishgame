@@ -6,7 +6,7 @@ const urlPrefix = process.env.URL_PREFIX || 'http://localhost:8000';
 function sendPasswordResetEmail(email, token) {
   const resetLink = `${urlPrefix}/reset-password?token=${token}`;
   return resend.emails.send({
-    from: 'fishies <help@0sake.net>',
+    from: 'Get Hooked! <help@0sake.net>',
     to: [email],
     subject: 'Password Reset Request',
     html: `
@@ -20,7 +20,7 @@ function sendPasswordResetEmail(email, token) {
 function sendEmailVerificationEmail(email, token) {
   const verificationLink = `${urlPrefix}/verify-email?token=${token}`;
   return resend.emails.send({
-    from: 'fishies <help@0sake.net>',
+    from: 'Get Hooked! <help@0sake.net>',
     to: [email],
     subject: 'Email Verification',
     html: `

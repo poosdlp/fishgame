@@ -7,16 +7,16 @@ type TutorialSection = {
 
 const sections: TutorialSection[] = [
   {
-    title: "Welcome to Phising",
+    title: "Welcome to Get Hooked!",
     body: "Welcome! This tutorial will teach you everything you need to know about the game",
   },
   {
     title: "Downloading",
-    body: "Phising requires you to download a mobile app on your android device. Get Hooked! requires both the website and mobile app to be active as your phone is the fishing rod",
+    body: "Get Hooked! requires you to download a mobile app on your android device. Get Hooked! requires both the website and mobile app to be active as your phone is the fishing rod",
   },
   {
     title: "Registering",
-    body: "Once you have installed Get Hooked! on your android device, you will have the ability to register a Phising account. An email will be sent to verify your account",
+    body: "Once you have installed Get Hooked! on your android device, you will have the ability to register a Get Hooked! account. An email will be sent to verify your account",
   },
   {
     title: "Syncing",
