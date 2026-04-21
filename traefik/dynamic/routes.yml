@@ -5,6 +5,7 @@ http:
       service: client
       entrypoints:
         - web
+      tls: {}
 
     server:
       rule: "PathPrefix(`/api`)"
@@ -13,6 +14,7 @@ http:
         - web
       middlewares:
         - server-stripprefix
+      tls: {}
 
   middlewares:
     server-stripprefix:
