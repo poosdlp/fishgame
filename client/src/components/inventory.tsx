@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { InventoryFish } from '../types/fish';
+import { getFishAssetByName } from '../utils/fishAssets';
 
 type Props = {
   fish: InventoryFish[];
@@ -54,7 +55,11 @@ export function Inventory({ fish }: Props) {
       {filtered.map(f => (
         <div key={f.name} className="fish-card">
           <div className="fish-card-img-wrap">
-            <img src="/tempfish.png" alt={f.name} className="fish-card-img" style={{ imageRendering: "pixelated" }} />
+            <img
+              src={getFishAssetByName(f.name)?.imagePath || '/fish/salmon.png'}
+              alt={f.name}
+              className="fish-card-img"
+            />
             {f.quantity > 1 && (
               <span className="fish-card-qty">x{f.quantity}</span>
             )}

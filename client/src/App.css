@@ -302,18 +302,19 @@ img {
   pointer-events: none;
 }
 
-.fish-dot {
+.fish-sprite {
   position: absolute;
-  width: 20px;
-  height: 20px;
-  margin-left: -10px;
-  margin-top: -10px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #ffd98e, #ef8d29 70%, #d76a0b 100%);
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.18);
+  width: 54px;
+  height: 36px;
+  margin-left: -27px;
+  margin-top: -18px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25));
 }
 
-.fish-dot-hover {
+.fish-sprite-hover {
   animation: fish-bob 0.58s ease-in-out infinite alternate;
 }
 
@@ -323,16 +324,15 @@ img {
 }
 
 /* Fish bite: glow + pulse while rushing to bobber */
-.fish-dot-bite {
-  background: radial-gradient(circle at 30% 30%, #fff, #ffd700 60%, #ff8c00 100%);
-  box-shadow: 0 0 10px 4px rgba(255, 200, 50, 0.55);
+.fish-sprite-bite {
   z-index: 5;
   animation: fish-bite-pulse 0.35s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 10px rgba(255, 200, 50, 0.55));
 }
 
 @keyframes fish-bite-pulse {
-  from { transform: scale(1);   box-shadow: 0 0 10px 4px rgba(255, 200, 50, 0.55); }
-  to   { transform: scale(1.4); box-shadow: 0 0 16px 6px rgba(255, 200, 50, 0.8); }
+  from { transform: scale(1); }
+  to   { transform: scale(1.18); }
 }
 
 .bobber {
@@ -697,6 +697,14 @@ img {
   gap: 0.5rem;
 }
 
+.caught-sprite {
+  width: 180px;
+  height: 120px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,0.35));
+}
+
 .caught-name {
   margin: 0;
   font-size: 1.2rem;
@@ -799,7 +807,7 @@ img {
   border-color: rgba(125, 211, 252, 0.45);
 }
 
-.fish-dot,
+.fish-sprite,
 .bobber,
 .side-tab {
   image-rendering: pixelated;

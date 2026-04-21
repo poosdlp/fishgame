@@ -1,8 +1,10 @@
 import type { LakeFish } from "../hooks/useFishSim";
 import { LakeHeight, LakeWidth } from '../data/lakeDim'
+import { getRandomFishAsset } from './fishAssets';
 
 export const createFish = (): LakeFish => {
-    const side=Math.floor(Math.random() * 4);
+  const side=Math.floor(Math.random() * 4);
+  const asset = getRandomFishAsset();
 
 // spawn outside the lake so it has to swim in
     let x=0;
@@ -31,13 +33,16 @@ export const createFish = (): LakeFish => {
 
     const vx = (centerX - x) * 0.001;
     const vy = (centerY - y) * 0.001;
-  // crypto.randomUUID() requires HTTPS; fall back for insecure contexts
+    // crypto.randomUUID() requires HTTPS; fall back for insecure contexts
   const id = typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
 
   return {
     id,
+    name: asset.name,
+    rarity: asset.rarity,
+    imagePath: asset.imagePath,
 
     x,
     y,

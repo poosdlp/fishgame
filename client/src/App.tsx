@@ -171,9 +171,11 @@ function App() {
               />
             )}
             {fishInLake.map(fish => (
-              <div
+              <img
                 key={fish.id}
-                className={`fish-dot${fish.behavior === "hovering" ? " fish-dot-hover" : ""}${fish.behavior === "bite" ? " fish-dot-bite" : ""}`}
+                className={`fish-sprite${fish.behavior === "hovering" ? " fish-sprite-hover" : ""}${fish.behavior === "bite" ? " fish-sprite-bite" : ""}`}
+                src={fish.imagePath}
+                alt={fish.name}
                 style={{
                   left: `${(fish.x / LakeWidth) * 100}%`,
                   top: `${(fish.y / LakeHeight) * 100}%`,

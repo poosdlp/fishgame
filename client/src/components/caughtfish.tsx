@@ -1,4 +1,5 @@
 import type { InventoryFish } from '../types/fish';
+import { getFishAssetByName } from '../utils/fishAssets';
 
 type CaughtFishData = InventoryFish;
 
@@ -23,6 +24,11 @@ export function CaughtFish({ fish, onReset }: Props) {
         <h2 className="caught-title">You caught a fish!</h2>
         {fish && (
           <div className="caught-details">
+            <img
+              src={getFishAssetByName(fish.name)?.imagePath || '/fish/salmon.png'}
+              alt={fish.name}
+              className="caught-sprite"
+            />
             <p className="caught-name">{fish.name}</p>
             <p className="caught-rarity" style={{ color: rarityColor[fish.rarity] || '#fff' }}>
               {fish.rarity}

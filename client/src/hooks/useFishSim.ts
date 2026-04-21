@@ -5,6 +5,9 @@ import type { GameState } from "../types/fish";
 // Anonymous fish for in-lake movement — no identity known until caught
 export type LakeFish = {
   id: string;
+  name: string;
+  rarity: "common" | "uncommon" | "rare" | "legendary" | "mythical" | "the one that got away";
+  imagePath: string;
   x: number;
   y: number;
   vx: number;
