@@ -1,22 +1,43 @@
 http:
   routers:
-    client:
+    client-http:
       rule: "PathPrefix(`/`)"
       service: client
       entrypoints:
         - web
-      tls: {}
+      middlewares:
+        - redirect-to-https
 
-    server:
+    server-http:
       rule: "PathPrefix(`/api`)"
       service: server
       entrypoints:
         - web
       middlewares:
+        - redirect-to-https
+
+    client-https:
+      rule: "PathPrefix(`/`)"
+      service: client
+      entrypoints:
+        - websecure
+      tls: {}
+
+    server-https:
+      rule: "PathPrefix(`/api`)"
+      service: server
+      entrypoints:
+        - websecure
+      middlewares:
         - server-stripprefix
       tls: {}
 
   middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
     server-stripprefix:
       stripPrefix:
         prefixes:
